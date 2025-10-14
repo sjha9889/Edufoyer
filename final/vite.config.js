@@ -6,7 +6,7 @@ export default defineConfig({
   define: {
     'process.env': {}
   },
-  base: './', // Use relative paths for assets
+  base: '/', // Use absolute paths from root for domain deployment
   build: {
     outDir: 'dist',
     assetsDir: 'assets',

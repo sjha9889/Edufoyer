@@ -56,7 +56,7 @@ app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5000', 'https://edufoyer.com/', 'edufoyer.com'],
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5000', 'https://edufoyer.com', 'http://edufoyer.com'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -136,6 +136,12 @@ if (isFrontendBuilt) {
   
   app.get('/vite.svg', (req, res) => {
     res.sendFile(path.join(frontendDistPath, 'vite.svg'));
+  });
+  
+  // Handle assets directory requests
+  app.get('/assets/*', (req, res) => {
+    const assetPath = path.join(frontendDistPath, req.path);
+    res.sendFile(assetPath);
   });
   
   // SPA fallback for non-API routes
