@@ -6,6 +6,17 @@ export default defineConfig({
   define: {
     'process.env': {}
   },
+  base: './', // Use relative paths for assets
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
+  },
   server: {
     port: Number(process.env.PORT) || 3000,
     open: true,

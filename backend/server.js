@@ -56,7 +56,7 @@ app.use(limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5000'],
+  origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5000', 'https://edufoyer.com/', 'edufoyer.com'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -112,7 +112,32 @@ app.use('/api/social', socialRoutes);
 const frontendDistPath = path.resolve(__dirname, '../final/dist');
 const isFrontendBuilt = fs.existsSync(path.join(frontendDistPath, 'index.html'));
 if (isFrontendBuilt) {
-  app.use(express.static(frontendDistPath));
+  // Serve static files with proper headers
+  app.use(express.static(frontendDistPath, {
+    maxAge: '1d', // Cache static assets for 1 day
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, path) => {
+      // Set proper MIME types for CSS and JS files
+      if (path.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      } else if (path.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (path.endsWith('.svg')) {
+        res.setHeader('Content-Type', 'image/svg+xml');
+      }
+    }
+  }));
+  
+  // Handle favicon and other common assets
+  app.get('/favicon.ico', (req, res) => {
+    res.sendFile(path.join(frontendDistPath, 'favicon.ico'));
+  });
+  
+  app.get('/vite.svg', (req, res) => {
+    res.sendFile(path.join(frontendDistPath, 'vite.svg'));
+  });
+  
   // SPA fallback for non-API routes
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path === '/health') return next();
