@@ -1,0 +1,26 @@
+module.exports = {
+  apps: [{
+    name: 'edufoyer-backend',
+    script: './backend/server.js',
+    instances: 1,
+    exec_mode: 'cluster',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 5000,
+      MONGODB_URI: 'mongodb+srv://shubham18031975_db_user:BYLhEzNit6q4xR3Y@cluster0.graepni.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
+      JWT_SECRET: 'edufoyer-super-secret-jwt-key-2024-production-secure-random-string-12345',
+      SMTP_HOST: 'smtp.gmail.com',
+      SMTP_PORT: 587,
+      SMTP_USER: 'avater.clasher@gmail.com',
+      SMTP_PASS: 'opbf nfwt kivq vtq'
+    },
+    error_file: './logs/err.log',
+    out_file: './logs/out.log',
+    log_file: './logs/combined.log',
+    time: true,
+    max_memory_restart: '1G',
+    restart_delay: 4000,
+    max_restarts: 10,
+    min_uptime: '10s'
+  }]
+};

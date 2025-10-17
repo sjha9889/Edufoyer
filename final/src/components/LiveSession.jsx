@@ -71,7 +71,7 @@ const LiveSession = () => {
 
       // Check server health first
       try {
-        const healthResponse = await fetch('http://localhost:5000/health');
+        const healthResponse = await fetch('/health');
         if (!healthResponse.ok) {
           throw new Error('Server is not responding properly');
         }

@@ -13,6 +13,9 @@ dotenv.config();
 
 const app = express();
 
+// Trust proxy for proper IP detection behind Nginx
+app.set('trust proxy', true);
+
 // Resolve __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,7 +53,12 @@ const limiter = rateLimit({
   skip: (req) => {
     // Skip rate limiting for health checks
     return req.path === '/health';
-  }
+  },
+  // Trust proxy for proper IP detection behind Nginx
+  trustProxy: true,
+  // Skip rate limiting for specific headers
+  skipSuccessfulRequests: false,
+  skipFailedRequests: false
 });
 app.use(limiter);
 

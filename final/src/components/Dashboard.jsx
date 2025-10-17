@@ -48,7 +48,7 @@ const Dashboard = () => {
       try {
         const token = localStorage.getItem('token');
         if (!token) return;
-        const res = await fetch('http://localhost:5000/api/solver/metrics', {
+        const res = await fetch('/api/solver/metrics', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const json = await res.json();
@@ -61,7 +61,7 @@ const Dashboard = () => {
 
     // Realtime listener for solver modal
     try {
-      const socket = io('http://localhost:5000', { withCredentials: true });
+      const socket = io(window.location.origin, { withCredentials: true });
       socketRef.current = socket;
 
       (async () => {
@@ -70,7 +70,7 @@ const Dashboard = () => {
           const userId = profile?.id || profile?._id;
           let subjects = [];
           try {
-            const profRes = await fetch('http://localhost:5000/api/profile', {
+            const profRes = await fetch('/api/profile', {
               headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
             const profJson = await profRes.json();
@@ -102,7 +102,7 @@ const Dashboard = () => {
         try {
           const token = localStorage.getItem('token');
           if (!token) return;
-          const res = await fetch('http://localhost:5000/api/solver/metrics', {
+          const res = await fetch('/api/solver/metrics', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const json = await res.json();
@@ -120,7 +120,7 @@ const Dashboard = () => {
         try {
           const token = localStorage.getItem('token');
           if (!token) return;
-          const res = await fetch('http://localhost:5000/api/solver/available-doubts', {
+          const res = await fetch('/api/solver/available-doubts', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const json = await res.json();
@@ -146,7 +146,7 @@ const Dashboard = () => {
         try {
           const token = localStorage.getItem('token');
           if (!token) return;
-          const res = await fetch('http://localhost:5000/api/solver/metrics', {
+          const res = await fetch('/api/solver/metrics', {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           const json = await res.json();
@@ -175,7 +175,7 @@ const Dashboard = () => {
     try {
       setIsJoiningSession(true);
       const token = localStorage.getItem('token');
-      await fetch('http://localhost:5000/api/solver/accept-doubt', {
+      await fetch('/api/solver/accept-doubt', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

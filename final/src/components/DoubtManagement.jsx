@@ -90,7 +90,7 @@ const DoubtManagement = () => {
 
     // Setup Socket.IO for realtime available doubts
     try {
-      const socket = io('http://localhost:5000', { withCredentials: true });
+      const socket = io(window.location.origin, { withCredentials: true });
       socketRef.current = socket;
 
       socket.on('connect', () => {
@@ -108,7 +108,7 @@ const DoubtManagement = () => {
           const userId = user?.id || user?._id;
           let subjects = [];
           try {
-            const profRes = await fetch('http://localhost:5000/api/profile', {
+            const profRes = await fetch('/api/profile', {
               headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
             });
             const profJson = await profRes.json();

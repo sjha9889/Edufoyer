@@ -19,7 +19,7 @@ const EmailVerification = ({ email, onVerificationSuccess, onResendVerification 
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/verify-email', {
+      const response = await fetch('/api/auth/verify-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ const EmailVerification = ({ email, onVerificationSuccess, onResendVerification 
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/resend-verification', {
+      const response = await fetch('/api/auth/resend-verification', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
