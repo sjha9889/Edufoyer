@@ -1,5 +1,5 @@
-const API_ORIGIN = import.meta?.env?.VITE_API_BASE_URL || window.__API_BASE_URL__ || '';
-const API_BASE_URL = `${API_ORIGIN}/api/solver`;
+// Use relative URLs for same-origin requests
+const API_BASE_URL = '/api/solver';
 
 class SolverService {
   constructor() {
