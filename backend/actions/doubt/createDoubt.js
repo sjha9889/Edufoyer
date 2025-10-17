@@ -111,8 +111,12 @@ export async function createDoubt(formData, userId) {
     // Optimize: Process notifications asynchronously to not block response
     if (potentialSolvers.length > 0) {
       setImmediate(async () => {
-        const frontendBase = process.env.FRONTEND_URL || 'http://localhost:3000';
-        const acceptUrl = `${frontendBase}/dashboard/solve/${savedDoubt._id}`;
+        const frontendBase = (process.env.FRONTEND_URL || '').trim();
+        if (!frontendBase) {
+          console.warn('FRONTEND_URL is not set; email links will be relative.');
+        }
+        const base = frontendBase || '';
+        const acceptUrl = `${base}/dashboard/solve/${savedDoubt._id}`;
         
         // Batch process notifications (max 10 at a time)
         const batchSize = 10;
@@ -140,7 +144,7 @@ export async function createDoubt(formData, userId) {
                       <a href="${acceptUrl}" style="background-color: #104be3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">View and Accept Doubt</a>
                     </p>
                     <p>Accepting the doubt will assign it exclusively to you. Please ensure you can provide a solution promptly.</p>
-                    <p>You can also see this and other available doubts in your <a href="${frontendBase}/dashboard/solve">Assigned Doubts</a> dashboard.</p>
+                    <p>You can also see this and other available doubts in your <a href="${base}/dashboard/solve">Assigned Doubts</a> dashboard.</p>
                     <br>
                     <p>Thank you,<br>Your App Name Team</p>
                   `,

@@ -130,8 +130,12 @@ export async function allotDoubt({ doubtId, solverId }) {
           getUserEmail(solverId),
         ]);
 
-        const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
-        const sessionUrl = `${frontendBase}/dashboard/session/${doubtId}`;
+        const frontendBase = (process.env.FRONTEND_URL || '').trim();
+        if (!frontendBase) {
+          console.warn('FRONTEND_URL is not set; email/session links will be relative.');
+        }
+        const base = frontendBase || '';
+        const sessionUrl = `${base}/dashboard/session/${doubtId}`;
         // Use email-specific link to trigger public token flow on the frontend
         const emailSessionUrl = `${sessionUrl}?email=true`;
 
