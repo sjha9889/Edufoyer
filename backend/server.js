@@ -37,8 +37,28 @@ try {
   console.error('Socket.IO initialization error:', error);
 }
 
-// Security middleware
-app.use(helmet());
+// Security middleware with LiveKit CSP configuration
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: [
+        "'self'",
+        "https://remote-opgy8hh4.livekit.cloud",
+        "wss://remote-opgy8hh4.livekit.cloud",
+        "https://edufoyer.com",
+        "http://edufoyer.com"
+      ],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      fontSrc: ["'self'", "data:"],
+      mediaSrc: ["'self'", "https://remote-opgy8hh4.livekit.cloud"],
+      objectSrc: ["'none'"],
+      frameSrc: ["'self'", "https://remote-opgy8hh4.livekit.cloud"]
+    }
+  }
+}));
 
 // Rate limiting with better configuration
 const limiter = rateLimit({

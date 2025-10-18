@@ -9,10 +9,14 @@ module.exports = {
       PORT: 5000,
       MONGODB_URI: 'mongodb+srv://shubham18031975_db_user:BYLhEzNit6q4xR3Y@cluster0.graepni.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0',
       JWT_SECRET: 'edufoyer-super-secret-jwt-key-2024-production-secure-random-string-12345',
+      FRONTEND_URL: 'https://edufoyer.com',
       SMTP_HOST: 'smtp.gmail.com',
       SMTP_PORT: 587,
       SMTP_USER: 'avater.clasher@gmail.com',
-      SMTP_PASS: 'opbf nfwt kivq vtq'
+      SMTP_PASS: 'opbf nfwt kivq vtq',
+      LIVEKIT_URL: 'https://remote-opgy8hh4.livekit.cloud',
+      LIVEKIT_API_KEY: 'API50P2DQKAEx6q',
+      LIVEKIT_API_SECRET: 'Y5Du8RkZ9d7efUwEPLxuvf08rssktCvqfFG5p0Beee7R'
     },
     error_file: './logs/err.log',
     out_file: './logs/out.log',
