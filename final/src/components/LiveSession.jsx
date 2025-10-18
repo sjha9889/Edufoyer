@@ -185,7 +185,7 @@ const LiveSession = () => {
       });
 
       // Connect to room (use Vite env var)
-      const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://remote-opgy8hh4.livekit.cloud';
+      const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://your-project.livekit.cloud';
       await newRoom.connect(LIVEKIT_URL, tokenData.token);
       
       setRoom(newRoom);

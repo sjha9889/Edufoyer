@@ -4,7 +4,7 @@ import livekitService from '../services/livekitService';
 import { LiveKitRoom, VideoConference } from '@livekit/components-react';
 import '@livekit/components-styles';
 
-const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://remote-opgy8hh4.livekit.cloud';
+const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || 'wss://your-project.livekit.cloud';
 
 const JoinPyqRoom = () => {
   const { roomName } = useParams();

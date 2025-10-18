@@ -21,8 +21,14 @@ export async function allotDoubt({ doubtId, solverId }) {
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
 
+  // Debug: Log environment variables
+  console.log('LiveKit Debug - API Key:', apiKey ? 'SET' : 'NOT SET');
+  console.log('LiveKit Debug - API Secret:', apiSecret ? 'SET' : 'NOT SET');
+  console.log('LiveKit Debug - LiveKit URL:', process.env.LIVEKIT_URL);
+
   if (!apiKey || !apiSecret) {
     console.error("LiveKit environment variables not configured.");
+    console.error("Available env vars:", Object.keys(process.env).filter(key => key.includes('LIVEKIT')));
     return {
       success: false,
       error: "Server configuration error for real-time session.",

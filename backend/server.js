@@ -11,6 +11,13 @@ import { fileURLToPath } from 'url';
 // Load environment variables
 dotenv.config();
 
+// Debug: Log LiveKit environment variables on startup
+console.log('=== LiveKit Environment Debug ===');
+console.log('LIVEKIT_URL:', process.env.LIVEKIT_URL);
+console.log('LIVEKIT_API_KEY:', process.env.LIVEKIT_API_KEY ? 'SET' : 'NOT SET');
+console.log('LIVEKIT_API_SECRET:', process.env.LIVEKIT_API_SECRET ? 'SET' : 'NOT SET');
+console.log('================================');
+
 const app = express();
 
 // Trust proxy for proper IP detection behind Nginx
