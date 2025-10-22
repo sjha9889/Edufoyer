@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 
 const AdminLogin = () => {
-  const [email, setEmail] = useState('21055834@kiit.ac.in');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('admin@nls.com');
+  const [password, setPassword] = useState('admin123');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
@@ -15,22 +15,13 @@ const AdminLogin = () => {
     setLoading(true);
     try {
       const result = await authService.login(email, password);
-      if (result && result.user && (result.user.role === 'admin' || result.user.isAdmin)) {
+      if (result && result.user && result.user.role === 'admin') {
         navigate('/admin/dashboard');
       } else {
-        setError('Admin access required');
+        setError('Admin access required. Please use admin credentials.');
       }
     } catch (err) {
-      // Dev bypass for local testing when backend rejects credentials
-      if (email === '21055834@kiit.ac.in' && password === '123456') {
-        try {
-          localStorage.setItem('token', 'dev-admin');
-          localStorage.setItem('adminBypass', 'true');
-          navigate('/admin/dashboard');
-          return;
-        } catch (_) {}
-      }
-      setError(err.message || 'Login failed');
+      setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -51,7 +42,7 @@ const AdminLogin = () => {
               onChange={(e) => setEmail(e.target.value)}
               required
               className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="admin@example.com"
+              placeholder="admin@nls.com"
             />
           </div>
           <div>

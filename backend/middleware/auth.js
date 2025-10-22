@@ -58,18 +58,50 @@ export const generateToken = (userId) => {
 export const requireAdmin = async (req, res, next) => {
   try {
     // First check if user is authenticated
-    await protect(req, res, () => {});
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Access token required' 
+      });
+    }
+
+    const decoded = jwt.verify(token, config.JWT_SECRET);
+    const user = await User.findById(decoded.userId).select('-password');
     
-    // Then check if user is admin
-    if (req.user.role !== 'admin') {
+    if (!user || !user.isActive) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid or inactive user' 
+      });
+    }
+
+    // Check if user is admin
+    if (user.role !== 'admin') {
       return res.status(403).json({
         success: false,
         message: 'Admin privileges required'
       });
     }
-    
+
+    req.user = user;
     next();
   } catch (error) {
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid token' 
+      });
+    }
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Token expired' 
+      });
+    }
+    
     console.error('Admin middleware error:', error);
     res.status(500).json({
       success: false,

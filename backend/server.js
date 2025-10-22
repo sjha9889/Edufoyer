@@ -133,6 +133,7 @@ import profileRoutes from './routes/profile.js';
 import notificationRoutes from './routes/notification.js';
 import livekitRoutes from './routes/livekit.js';
 import socialRoutes from './routes/social.js';
+import adminRoutes from './routes/admin.js';
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -142,6 +143,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/livekit', livekitRoutes);
 app.use('/api/social', socialRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Serve frontend build (single-port setup) if available
 const frontendDistPath = path.resolve(__dirname, '../final/dist');
@@ -272,6 +274,7 @@ const startServer = async () => {
       console.log(`🔔 Notifications API: http://localhost:${PORT}/api/notifications`);
       console.log(`📹 LiveKit API: http://localhost:${PORT}/api/livekit`);
       console.log(`📱 Social API: http://localhost:${PORT}/api/social`);
+      console.log(`🛡️ Admin API: http://localhost:${PORT}/api/admin`);
       console.log(`\n📝 Test credentials:`);
       console.log(`   Email: test@example.com`);
       console.log(`   Password: password123`);

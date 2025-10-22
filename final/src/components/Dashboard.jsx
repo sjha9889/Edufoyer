@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Users, BookOpen, MessageCircle, Settings, Search, LogOut, Bell, Video, Share2 } from 'lucide-react';
+import { Home, Users, BookOpen, MessageCircle, Settings, Search, LogOut, Bell, Video, Share2, Building2, UserPlus, Calendar } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
@@ -250,19 +250,18 @@ const Dashboard = () => {
     const baseItems = [
       { icon: Home, label: 'Home', active: true, path: '/dashboard' },
       { icon: BookOpen, label: 'My Doubts', path: '/dashboard/doubts' },
-      { icon: Video, label: 'Live PYQ', path: '/dashboard/pyq' },
-      { icon: Video, label: 'Solve Doubts', path: '/dashboard/doubts' },
       { icon: BookOpen, label: 'Solved Doubts', path: '/dashboard/solved-doubts' },
       { icon: Share2, label: 'Educational Social', path: `/dashboard/social/${userId}` },
+      { icon: Building2, label: 'Corporate Connect', path: '/dashboard/corporate-connect' },
+      { icon: UserPlus, label: 'Online Referral System', path: '/dashboard/referral-system' },
+      { icon: Calendar, label: 'Previous Year Live', path: '/dashboard/pyq' },
       { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
-      { icon: MessageCircle, label: 'Messages', badge: 4 },
-      { icon: Settings, label: 'Settings' },
       { icon: LogOut, label: 'Logout', onClick: handleLogout }
     ];
 
     // Add admin panel if user is admin
     if (user?.role === 'admin') {
-      baseItems.splice(-2, 0, { icon: Users, label: 'Admin Panel', path: '/admin/panel' });
+      baseItems.splice(-1, 0, { icon: Users, label: 'Admin Panel', path: '/admin/panel' });
     }
 
     return baseItems;
@@ -330,56 +329,21 @@ const Dashboard = () => {
       <div className="flex-1 overflow-hidden">
         {/* Header */}
         <div className="bg-white border-b border-gray-200">
-          <div className="px-2 py-2">
-            <div className="flex items-center justify-center">
-              <div className="flex items-center gap-1 justify-center overflow-x-auto w-full">
-                {/* Corporate Connect */}
-                <button 
-                  onClick={() => navigate('/dashboard/corporate-connect')}
-                  className="px-2 py-1.5 border border-emerald-600 text-emerald-600 rounded-md font-medium hover:bg-emerald-50 flex items-center gap-1 transition-colors whitespace-nowrap text-xs"
-                >
-                  <Video className="w-3 h-3" />
-                  Corporate Connect 
-                </button>
-
-                {/* Online Referral System */}
-                <button 
-                  onClick={() => navigate('/dashboard/referral-system')}
-                  className="px-2 py-1.5 border border-purple-600 text-purple-600 rounded-md font-medium hover:bg-purple-50 flex items-center gap-1 transition-colors whitespace-nowrap text-xs"
-                >
-                  <Users className="w-3 h-3" />
-                  Online Referral System
-                </button>
-
-                {/* Educational Social */}
-                <button 
-                  onClick={() => navigate(`/dashboard/social/${user?.id || 'default_user'}`)}
-                  className="px-2 py-1.5 border border-green-500 text-green-500 rounded-md font-medium hover:bg-green-50 flex items-center gap-1 transition-colors whitespace-nowrap text-xs"
-                >
-                  <Share2 className="w-3 h-3" />
-                  Educational Social
-                </button>
-
-                {/* Previous Year Live */}
-                <button 
-                  onClick={() => navigate('/dashboard/pyq')}
-                  className="px-2 py-1.5 border border-emerald-600 text-emerald-600 rounded-md font-medium hover:bg-emerald-50 flex items-center gap-1 transition-colors whitespace-nowrap text-xs"
-                >
-                  <Video className="w-3 h-3" />
-                  Previous Year Live
-                </button>
-
+          <div className="px-6 py-3">
+            <div className="flex items-center justify-between">
+              {/* Left side - empty for now */}
+              <div></div>
+              
+              {/* Right side - Action buttons */}
+              <div className="flex items-center gap-3">
                 {/* Solve a Doubt */}
-                <button className="px-2 py-1.5 bg-blue-500 border border-blue-600 text-white rounded-md font-medium hover:bg-blue-600 flex items-center gap-1 transition-colors whitespace-nowrap text-xs">
-                  <BookOpen className="w-3 h-3" />
+                <button className="px-4 py-2 bg-blue-500 border border-blue-600 text-white rounded-md font-medium hover:bg-blue-600 flex items-center gap-2 transition-colors text-sm">
+                  <BookOpen className="w-4 h-4" />
                   Solve a Doubt
                 </button>
 
                 {/* Ask a Doubt */}
                 <AskDoubt />
-
-                {/* Register as Solver */}
-                <SolverRegistration />
               </div>
             </div>
           </div>
