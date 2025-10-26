@@ -4,7 +4,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   define: {
-    'process.env': {}
+    'process.env': {},
+    '__APP_TITLE__': JSON.stringify('EduFoyer - Learn Together, Earn Together')
   },
   base: '/', // Use absolute paths from root for domain deployment
   build: {

@@ -368,40 +368,6 @@ const Dashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Educational Social Feature Card */}
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-sm border border-green-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                    <Share2 className="w-6 h-6 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800">Educational Social</h3>
-                    <p className="text-sm text-gray-600">Connect, share, and learn together</p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => navigate(`/dashboard/social/${user?.id || 'default_user'}`)}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                >
-                  Explore
-                </button>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Users className="w-4 h-4" />
-                  <span>Create study circles with friends</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <BookOpen className="w-4 h-4" />
-                  <span>Share educational content and notes</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Discuss topics and get help</span>
-                </div>
-              </div>
-            </div>
 
             {/* Performance Chart */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -466,58 +432,13 @@ const Dashboard = () => {
               </div>
             </div>
 
+            {/* My Doubts Sidebar */}
+            <DoubtSidebar />
+
             {/* Right Column */}
             <div className="space-y-6">
-              {/* My Doubts Sidebar */}
-              <DoubtSidebar />
               
-              {/* Subject Cards */}
-              <div className="space-y-3">
-                <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-                  <h4 className="font-semibold text-gray-800">Life Sciences</h4>
-                  <p className="text-sm text-gray-500">Chapter 12</p>
-                </div>
-                
-                <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-                  <h4 className="font-semibold text-gray-800">Social Science</h4>
-                  <p className="text-sm text-gray-500">Chapter 8</p>
-                </div>
-                
-                <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md transition-shadow">
-                  <h4 className="font-semibold text-gray-800">Advanced Math</h4>
-                  <p className="text-sm text-gray-500">Module 3</p>
-                </div>
-              </div>
 
-              {/* Messages */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800">Messages</h3>
-                  <button className="text-blue-500 text-sm font-medium hover:text-blue-600">
-                    View All
-                  </button>
-                </div>
-                
-                <div className="space-y-4">
-                  {messages.map((message) => (
-                    <div key={message.id} className="flex items-start space-x-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer">
-                      <div className={`w-10 h-10 ${message.color} rounded-full flex items-center justify-center text-white font-semibold text-sm`}>
-                        {message.initials}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-semibold text-gray-800 truncate">
-                            {message.name}
-                          </p>
-                          <p className="text-xs text-gray-500">{message.time}</p>
-                        </div>
-                        <p className="text-sm text-gray-600 truncate">{message.message}</p>
-                        <p className="text-xs text-blue-500 mt-1">{message.subtitle}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
           </div>
         </div>
