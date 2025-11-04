@@ -149,6 +149,7 @@ app.use('/api/admin', adminRoutes);
 const frontendDistPath = path.resolve(__dirname, '../final/dist');
 const isFrontendBuilt = fs.existsSync(path.join(frontendDistPath, 'index.html'));
 if (isFrontendBuilt) {
+  console.log('Serving frontend from:', frontendDistPath);
   // Serve static files with proper headers
   app.use(express.static(frontendDistPath, {
     maxAge: '1d', // Cache static assets for 1 day
@@ -184,6 +185,8 @@ if (isFrontendBuilt) {
   // SPA fallback for non-API routes
   app.get('*', (req, res, next) => {
     if (req.path.startsWith('/api') || req.path === '/health') return next();
+    // Prevent browsers/proxies from caching HTML so users always get latest app shell
+    res.setHeader('Cache-Control', 'no-store, must-revalidate');
     res.sendFile(path.join(frontendDistPath, 'index.html'));
   });
 } else {
