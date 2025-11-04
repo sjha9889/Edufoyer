@@ -8,7 +8,7 @@ export function initSocket(httpServer) {
   
   ioInstance = new SocketIOServer(httpServer, {
     cors: {
-      origin: ['http://localhost:3000', 'http://localhost:5173'],
+      origin: ['http://localhost:3000', 'http://localhost:5173', 'https://edufoyer.com', 'http://edufoyer.com'],
       credentials: true,
       methods: ['GET', 'POST']
     },

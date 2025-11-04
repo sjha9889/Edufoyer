@@ -21,6 +21,7 @@ const DoubtManagement = () => {
   const socketRef = useRef(null);
   const seenAvailableIdsRef = useRef(new Set());
   const pollingRef = useRef(null);
+  const [toast, setToast] = useState(null);
 
   const fetchMyDoubts = async () => {
     try {
@@ -141,6 +142,21 @@ const DoubtManagement = () => {
           setShowAvailableModal(false);
           setIncomingDoubt(null);
         }
+      });
+
+      // Show toast to solver when asker rates and ends the session
+      socket.on('doubt:rated', ({ doubtId, rating }) => {
+        setToast({
+          message: `Asker rated the session${rating ? ` (${rating}/5)` : ''} and left. Doubt ${String(doubtId).slice(-6)}.`,
+        });
+        // Optionally mark assigned doubt as completed in UI
+        setAssignedDoubts((prev) => prev.map((d) => (
+          String(d._id || d.id) === String(doubtId)
+            ? { ...d, solverDoubt: { ...(d.solverDoubt || {}), resolution_status: 'session_completed' } }
+            : d
+        )));
+        // Auto-hide toast after 5s
+        setTimeout(() => setToast(null), 5000);
       });
     } catch (sockErr) {
       console.error('Socket setup error:', sockErr);
@@ -371,6 +387,14 @@ const DoubtManagement = () => {
 
   return (
     <div className="space-y-6">
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 bg-green-400 rounded-full"></span>
+            <span className="text-sm">{toast.message}</span>
+          </div>
+        </div>
+      )}
       {showAvailableModal && incomingDoubt && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">

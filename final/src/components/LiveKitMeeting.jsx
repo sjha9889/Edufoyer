@@ -101,6 +101,45 @@ const LiveKitMeeting = () => {
     }
   }, [remainingSecs, isDoubter, hasSubmittedRating]);
 
+  // Ensure built-in LiveKit Leave button redirects (solver) or opens rating (asker without rating)
+  useEffect(() => {
+    const onLeaveClick = (e) => {
+      try {
+        if (isDoubter && !hasSubmittedRating) {
+          // Block asker from leaving until rating
+          e.stopPropagation();
+          e.preventDefault();
+          setShowCompletionModal(true);
+          return false;
+        }
+        // Solver or asker after rating → redirect
+        setTimeout(() => navigate('/dashboard'), 0);
+      } catch {}
+    };
+
+    const bindIfPresent = () => {
+      const btn = document.querySelector('[data-lk-leave], button[title="Leave"], [aria-label="Leave"]');
+      if (btn) {
+        // Remove any previous handler to avoid duplicates
+        btn.removeEventListener('click', onLeaveClick, true);
+        btn.addEventListener('click', onLeaveClick, true);
+        return true;
+      }
+      return false;
+    };
+
+    // Try now and also observe for future mounts
+    bindIfPresent();
+    const observer = new MutationObserver(() => bindIfPresent());
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      observer.disconnect();
+      const btn = document.querySelector('[data-lk-leave], button[title="Leave"], [aria-label="Leave"]');
+      if (btn) btn.removeEventListener('click', onLeaveClick, true);
+    };
+  }, [isDoubter, hasSubmittedRating, navigate]);
+
   const handleCompleteDoubt = async () => {
     try {
       setCompleting(true);
@@ -108,9 +147,9 @@ const LiveKitMeeting = () => {
       await doubtService.submitFeedback(doubtId, { rating, comment });
       setHasSubmittedRating(true);
       
-      // Show success message and redirect
+      // Show success message and redirect to main dashboard
       alert('Doubt completed successfully!');
-      navigate('/dashboard/doubts');
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error submitting feedback:', error);
       alert('Failed to submit feedback. Please try again.');
@@ -162,8 +201,11 @@ const LiveKitMeeting = () => {
         video
         onError={(e) => setError(e?.message || 'LiveKit error')}
         onDisconnected={() => {
+          // If asker leaves without rating, prompt rating. Otherwise redirect to dashboard
           if (isDoubter && !hasSubmittedRating) {
             setShowCompletionModal(true);
+          } else {
+            navigate('/dashboard');
           }
         }}
         className="h-full"
@@ -191,6 +233,35 @@ const LiveKitMeeting = () => {
           </button>
         </div>
       )}
+
+      {/* Intercept built-in Leave: block askers until rating, redirect solvers */}
+      <script dangerouslySetInnerHTML={{ __html: `
+        (function(){
+          const tryBind = () => {
+            const btn = document.querySelector('[data-lk-leave], button[title="Leave"], [aria-label="Leave"]');
+            if (!btn || btn.getAttribute('data-nav-bound')) return;
+            btn.setAttribute('data-nav-bound','1');
+            btn.addEventListener('click', function(e){
+              try {
+                const isDoubter = ${JSON.stringify(true)} && ${isDoubter ? 'true' : 'false'};
+                const hasRated = ${hasSubmittedRating ? 'true' : 'false'};
+                if (isDoubter && !hasRated) {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const evt = new CustomEvent('EF_RATE_PROMPT');
+                  window.dispatchEvent(evt);
+                  return false;
+                } else {
+                  setTimeout(function(){ window.history.pushState({}, '', '/dashboard'); window.location.assign('/dashboard'); }, 0);
+                }
+              } catch(_) {}
+            }, true);
+          };
+          const obs = new MutationObserver(tryBind);
+          obs.observe(document.body, { childList: true, subtree: true });
+          tryBind();
+        })();
+      ` }} />
 
       {/* Completion Modal */}
       {isDoubter && showCompletionModal && (

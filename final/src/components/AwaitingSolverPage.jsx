@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
 import { Clock, User, Bell, CheckCircle, AlertCircle, RefreshCw, Video } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import notificationService from '../services/notificationService';
@@ -16,6 +17,7 @@ const AwaitingSolverPage = () => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [showAcceptanceNotification, setShowAcceptanceNotification] = useState(false);
   const [solverInfo, setSolverInfo] = useState(null);
+  const socketRef = useRef(null);
 
   // Format time elapsed
   const formatTimeElapsed = (seconds) => {
@@ -53,10 +55,10 @@ const AwaitingSolverPage = () => {
       console.log('📋 Processed doubt data:', doubtData);
       setDoubt(doubtData);
       
-      // If doubt is assigned, redirect to session
+      // If doubt is assigned, show acceptance modal instead of auto-redirect
       if (doubtData.status === 'assigned') {
-        navigate(`/dashboard/session/${doubtId}`);
-        return;
+        setSolverInfo({ name: 'Solver', doubtTitle: doubtData.subject });
+        setShowAcceptanceNotification(true);
       }
     } catch (err) {
       console.error('Error fetching doubt:', err);
@@ -159,6 +161,29 @@ const AwaitingSolverPage = () => {
     loadData();
   }, [doubtId]);
 
+  // Realtime: subscribe to the subject room so the asker gets instant assignment modal
+  useEffect(() => {
+    if (!doubt?.subject) return;
+    try {
+      const socket = io(window.location.origin, { withCredentials: true });
+      socketRef.current = socket;
+      const subjects = [String(doubt.subject).toLowerCase()];
+      socket.emit('registerSolver', { userId: null, subjects });
+      socket.on('doubt:assigned', ({ doubtId: assignedId }) => {
+        if (String(assignedId) === String(doubtId)) {
+          setSolverInfo({ name: 'Solver', doubtTitle: doubt.subject });
+          setShowAcceptanceNotification(true);
+        }
+      });
+    } catch {}
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [doubtId, doubt?.subject]);
+
   // Timer for elapsed time
   useEffect(() => {
     if (doubt?.createdAt) {
@@ -211,6 +236,7 @@ const AwaitingSolverPage = () => {
             <div>
               <h1 className="text-2xl font-bold text-gray-800">Awaiting Solver</h1>
               <p className="text-gray-600 mt-1">Your doubt is waiting for a solver to accept it</p>
+              <p className="mt-1"><span className="font-bold text-gray-800">please keep refreshing</span></p>
             </div>
             <button
               onClick={handleRefresh}
@@ -356,8 +382,8 @@ const AwaitingSolverPage = () => {
                     <span className="text-xs font-semibold text-blue-600">3</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-800">Session Starts</p>
-                    <p className="text-xs text-gray-600">You'll be redirected to the solving session</p>
+                    <p className="text-sm font-medium text-gray-800">Session Ready</p>
+                    <p className="text-xs text-gray-600">You can join after clicking Accept/Join in the popup</p>
                   </div>
                 </div>
               </div>

@@ -19,6 +19,7 @@ const Dashboard = () => {
   const [isJoiningSession, setIsJoiningSession] = useState(false);
   const socketRef = useRef(null);
   const pollingRef = useRef(null);
+  const [toast, setToast] = useState(null);
   const seenAvailableIdsRef = useRef(new Set());
   const navigate = useNavigate();
 
@@ -93,6 +94,12 @@ const Dashboard = () => {
           setShowAvailableModal(false);
           setIncomingDoubt(null);
         }
+      });
+
+      // Toast on asker rating completion
+      socket.on('doubt:rated', ({ doubtId, rating }) => {
+        setToast({ message: `Asker rated ${rating ? `(${rating}/5)` : ''} and ended session. Doubt ${String(doubtId).slice(-6)}.` });
+        setTimeout(() => setToast(null), 5000);
       });
     } catch {}
 
@@ -269,6 +276,14 @@ const Dashboard = () => {
 
   return (
     <div className="flex h-screen bg-gray-50">
+      {toast && (
+        <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 bg-green-400 rounded-full"></span>
+            <span className="text-sm">{toast.message}</span>
+          </div>
+        </div>
+      )}
       {showAvailableModal && incomingDoubt && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
