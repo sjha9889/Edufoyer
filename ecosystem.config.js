@@ -13,9 +13,9 @@ module.exports = {
       SMTP_HOST: 'smtp.gmail.com',
       SMTP_PORT: 587,
       SMTP_USER: 'avater.clasher@gmail.com',
-      SMTP_PASS: 'opbf nfwt kivq vtq',
+      SMTP_PASS: 'opbf nfwt kivq vtqk',
       LIVEKIT_URL: 'wss://remote-opgy8hh4.livekit.cloud',
-      LIVEKIT_API_KEY: 'API50P2DQKAEx6q',
+      LIVEKIT_API_KEY: 'API5oP2DQKAEx6q',
       LIVEKIT_API_SECRET: 'Y5Du8RkZ9d7efUwEPLxuvf08rssktCvqfFG5p0Beee7R'
     },
     error_file: './logs/err.log',
