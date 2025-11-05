@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, BookOpen, MessageCircle, Settings, Search, LogOut, Bell, Video } from 'lucide-react';
+import { Home, Users, BookOpen, Search, LogOut, Bell, Share2, Building2, UserPlus, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import SolvedDoubtsList from './SolvedDoubtsList';
@@ -52,16 +52,28 @@ const SolvedDoubtsPage = () => {
     );
   }
 
-  const sidebarItems = [
-    { icon: Home, label: 'Home', path: '/dashboard' },
-    { icon: BookOpen, label: 'My Doubts', path: '/dashboard/doubts' },
-    { icon: Video, label: 'Solve Doubts', path: '/dashboard/doubts' },
-    { icon: BookOpen, label: 'Solved Doubts', active: true, path: '/dashboard/solved-doubts' },
-    { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
-    { icon: MessageCircle, label: 'Messages', badge: 4 },
-    { icon: Settings, label: 'Settings' },
-    { icon: LogOut, label: 'Logout', onClick: handleLogout }
-  ];
+  // Create dynamic sidebar items based on user (matching Dashboard exactly)
+  const getSidebarItems = () => {
+    const userId = user?.id || 'default_user';
+    const baseItems = [
+      { icon: Home, label: 'Home', path: '/dashboard' },
+      { icon: BookOpen, label: 'My Doubts', path: '/dashboard/doubts' },
+      { icon: BookOpen, label: 'Solved Doubts', active: true, path: '/dashboard/solved-doubts' },
+      { icon: Share2, label: 'Educational Social', path: `/dashboard/social/${userId}` },
+      { icon: Building2, label: 'Corporate Connect', path: '/dashboard/corporate-connect' },
+      { icon: UserPlus, label: 'Online Referral System', path: '/dashboard/referral-system' },
+      { icon: Calendar, label: 'Previous Year Live', path: '/dashboard/pyq' },
+      { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
+      { icon: LogOut, label: 'Logout', onClick: handleLogout }
+    ];
+
+    // Add admin panel if user is admin
+    if (user?.role === 'admin') {
+      baseItems.splice(-1, 0, { icon: Users, label: 'Admin Panel', path: '/admin/panel' });
+    }
+
+    return baseItems;
+  };
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -74,7 +86,7 @@ const SolvedDoubtsPage = () => {
         </div>
         
         <nav className="mt-6">
-          {sidebarItems.map((item, index) => (
+          {getSidebarItems().map((item, index) => (
             <div
               key={index}
               onClick={() => {

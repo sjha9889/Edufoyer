@@ -1,6 +1,14 @@
 import React, { useState } from 'react';
-import { HelpCircle, Upload, X } from 'lucide-react';
+import { HelpCircle, Upload, X, AlertCircle } from 'lucide-react';
 import doubtService from '../services/doubtService';
+import { 
+  validateTitle, 
+  validateSubject, 
+  validateDescription, 
+  validateCategory, 
+  validateImage,
+  validateDoubtForm 
+} from '../utils/doubtValidation';
 
 const AskDoubt = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -11,6 +19,15 @@ const AskDoubt = () => {
   const [uploadedImage, setUploadedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [uploading, setUploading] = useState(false);
+  
+  // Validation errors state
+  const [errors, setErrors] = useState({
+    title: '',
+    subject: '',
+    description: '',
+    category: '',
+    image: ''
+  });
 
   const handleImageUpload = (e) => {
     if (!e.target.files || e.target.files.length === 0) {
@@ -18,11 +35,17 @@ const AskDoubt = () => {
     }
 
     const file = e.target.files[0];
-    if (file.size > 2 * 1024 * 1024) {
-      alert('File size exceeds 2MB limit.');
+    
+    // Validate image
+    const imageValidation = validateImage(file);
+    if (!imageValidation.valid) {
+      setErrors(prev => ({ ...prev, image: imageValidation.error }));
+      e.target.value = ''; // Clear the input
       return;
     }
-
+    
+    // Clear image error if valid
+    setErrors(prev => ({ ...prev, image: '' }));
     setUploadedImage(file);
 
     if (imagePreview) {
@@ -44,11 +67,72 @@ const AskDoubt = () => {
     setImagePreview(null);
   };
 
+  // Real-time validation handlers
+  const handleTitleChange = (e) => {
+    const value = e.target.value;
+    setTitle(value);
+    const validation = validateTitle(value);
+    setErrors(prev => ({ ...prev, title: validation.error }));
+  };
+
+  const handleSubjectChange = (e) => {
+    const value = e.target.value;
+    setSubject(value);
+    const validation = validateSubject(value);
+    setErrors(prev => ({ ...prev, subject: validation.error }));
+  };
+
+  const handleDescriptionChange = (e) => {
+    const value = e.target.value;
+    setDoubtDescription(value);
+    const validation = validateDescription(value);
+    setErrors(prev => ({ ...prev, description: validation.error }));
+  };
+
+  const handleCategoryChange = (e) => {
+    const value = e.target.value;
+    setDoubtCategory(value);
+    const validation = validateCategory(value);
+    setErrors(prev => ({ ...prev, category: validation.error }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!title || !subject || !doubtCategory || !doubtDescription) {
-      alert('Please fill all required fields: Title, Subject, Category, and Description.');
+    // Reset errors
+    setErrors({
+      title: '',
+      subject: '',
+      description: '',
+      category: '',
+      image: ''
+    });
+    
+    // Validate all fields
+    const formData = {
+      title,
+      subject,
+      category: doubtCategory,
+      description: doubtDescription,
+      image: uploadedImage
+    };
+    
+    const validation = validateDoubtForm(formData);
+    
+    if (!validation.valid) {
+      // Set all validation errors
+      setErrors(validation.errors);
+      
+      // Scroll to first error
+      const firstErrorField = Object.keys(validation.errors).find(key => validation.errors[key]);
+      if (firstErrorField) {
+        const errorElement = document.getElementById(firstErrorField === 'description' ? 'description' : firstErrorField);
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          errorElement.focus();
+        }
+      }
+      
       return;
     }
     
@@ -56,15 +140,26 @@ const AskDoubt = () => {
 
     try {
       const doubtData = {
-        title,
-        subject,
+        title: title.trim(),
+        subject: subject.trim(),
         category: doubtCategory,
-        description: doubtDescription,
+        description: doubtDescription.trim(),
         imagePath: null,
         tags: []
       };
       
       const result = await doubtService.createDoubt(doubtData);
+      
+      // Check if backend returned errors
+      if (!result.success) {
+        if (result.fieldErrors) {
+          setErrors(result.fieldErrors);
+        } else {
+          alert(result.error || 'Failed to submit doubt. Please check your input and try again.');
+        }
+        setUploading(false);
+        return;
+      }
       
       // Redirect to awaiting page
       const doubtId = result.doubtId;
@@ -78,7 +173,7 @@ const AskDoubt = () => {
       window.location.href = `/dashboard/awaiting/temp-${Date.now()}`;
       
     } catch (error) {
-      alert(`Failed to submit doubt: ${error.message}`);
+      alert(`Failed to submit doubt: ${error.message || 'Please check your input and try again.'}`);
     } finally {
       setUploading(false);
     }
@@ -124,29 +219,41 @@ const AskDoubt = () => {
           {/* Title Field */}
           <div className="space-y-2">
             <label htmlFor="title" className="block text-gray-700 text-sm font-medium">
-              Doubt Title
+              Doubt Title <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               id="title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              placeholder="Enter a clear title for your doubt"
+              onChange={handleTitleChange}
+              className={`w-full bg-gray-50 border ${
+                errors.title ? 'border-red-500' : 'border-gray-300'
+              } text-gray-900 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none`}
+              placeholder="Enter a clear title for your doubt (min 3 characters)"
+              maxLength={200}
               required
             />
+            {errors.title && (
+              <div className="flex items-center gap-1 text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errors.title}</span>
+              </div>
+            )}
+            <p className="text-xs text-gray-500">{title.length}/200 characters</p>
           </div>
 
           {/* Subject Select */}
           <div className="space-y-2">
             <label htmlFor="subject" className="block text-gray-700 text-sm font-medium">
-              Subject
+              Subject <span className="text-red-500">*</span>
             </label>
             <select
               id="subject"
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+              onChange={handleSubjectChange}
+              className={`w-full bg-gray-50 border ${
+                errors.subject ? 'border-red-500' : 'border-gray-300'
+              } text-gray-900 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none`}
               required
             >
               <option value="">Select a subject</option>
@@ -157,6 +264,12 @@ const AskDoubt = () => {
               <option value="java">Java</option>
               <option value="mern">MERN</option>
             </select>
+            {errors.subject && (
+              <div className="flex items-center gap-1 text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errors.subject}</span>
+              </div>
+            )}
           </div>
 
           {/* Doubt Category */}
@@ -171,7 +284,7 @@ const AskDoubt = () => {
                   name="doubtCategory"
                   value="small"
                   checked={doubtCategory === "small"}
-                  onChange={(e) => setDoubtCategory(e.target.value)}
+                  onChange={handleCategoryChange}
                   className="text-blue-500 focus:ring-blue-500"
                 />
                 <span className="text-gray-700">Quick 20-Minute Session</span>
@@ -182,7 +295,7 @@ const AskDoubt = () => {
                   name="doubtCategory"
                   value="medium"
                   checked={doubtCategory === "medium"}
-                  onChange={(e) => setDoubtCategory(e.target.value)}
+                  onChange={handleCategoryChange}
                   className="text-blue-500 focus:ring-blue-500"
                 />
                 <span className="text-gray-700">Medium Topic — Unpacking Concepts in 30 Minutes</span>
@@ -193,27 +306,45 @@ const AskDoubt = () => {
                   name="doubtCategory"
                   value="large"
                   checked={doubtCategory === "large"}
-                  onChange={(e) => setDoubtCategory(e.target.value)}
+                  onChange={handleCategoryChange}
                   className="text-blue-500 focus:ring-blue-500"
                 />
                 <span className="text-gray-700">Large Topic — Understand the Entire Chapter in 60 Minutes</span>
               </label>
             </div>
+            {errors.category && (
+              <div className="flex items-center gap-1 text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errors.category}</span>
+              </div>
+            )}
           </div>
 
           {/* Doubt Description */}
           <div className="space-y-2">
             <label htmlFor="description" className="block text-gray-700 text-sm font-medium">
-              Describe your doubt
+              Describe your doubt <span className="text-red-500">*</span>
             </label>
             <textarea
               id="description"
               value={doubtDescription}
-              onChange={(e) => setDoubtDescription(e.target.value)}
-              placeholder="What are you having trouble with? Be as detailed as possible."
-              className="w-full min-h-[100px] bg-gray-50 border border-gray-300 text-gray-900 rounded-md px-3 py-2 placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-vertical"
+              onChange={handleDescriptionChange}
+              placeholder="What are you having trouble with? Be as detailed as possible (minimum 10 characters)."
+              className={`w-full min-h-[100px] bg-gray-50 border ${
+                errors.description ? 'border-red-500' : 'border-gray-300'
+              } text-gray-900 rounded-md px-3 py-2 placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-vertical`}
+              maxLength={5000}
               required
             />
+            {errors.description && (
+              <div className="flex items-center gap-1 text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errors.description}</span>
+              </div>
+            )}
+            <p className="text-xs text-gray-500">
+              {doubtDescription.length}/5000 characters (minimum 10 required)
+            </p>
           </div>
 
           {/* Image Upload */}
@@ -221,6 +352,12 @@ const AskDoubt = () => {
             <label className="block text-gray-700 text-sm font-medium">
               Upload reference image (optional)
             </label>
+            {errors.image && (
+              <div className="flex items-center gap-1 text-red-600 text-sm">
+                <AlertCircle className="w-4 h-4" />
+                <span>{errors.image}</span>
+              </div>
+            )}
             <div className="border border-gray-300 bg-gray-50 rounded-md p-4">
               <input
                 type="file"

@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { LiveKitRoom, VideoConference } from '@livekit/components-react';
 import '@livekit/components-styles';
-import { CheckCircle, Star, Clock } from 'lucide-react';
+import { CheckCircle, Star, Clock, AlertCircle, Shield } from 'lucide-react';
 import livekitService from '../services/livekitService';
 import doubtService from '../services/doubtService';
 import authService from '../services/authService';
+import { containsProfanity, getProfanityErrorMessage } from '../utils/profanityFilter';
+import { detectRecordingAttempts, detectVisibilityChanges, getRecordingWarningMessage, addAntiRecordingIndicators } from '../utils/screenRecordingDetector';
 
 // A compact LiveKit meeting page built for React (Vite) + Node backend
 // - Requires: VITE_LIVEKIT_URL in final/.env
@@ -25,6 +27,10 @@ const LiveKitMeeting = () => {
   const [isDoubter, setIsDoubter] = useState(false);
   const [hasSubmittedRating, setHasSubmittedRating] = useState(false);
   const [remainingSecs, setRemainingSecs] = useState(null);
+  const [profanityWarning, setProfanityWarning] = useState(null);
+  const [recordingWarning, setRecordingWarning] = useState(null);
+  const chatInputRef = useRef(null);
+  const recordingDetectionRef = useRef(null);
 
   const LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL;
 
@@ -100,6 +106,220 @@ const LiveKitMeeting = () => {
       setShowCompletionModal(true);
     }
   }, [remainingSecs, isDoubter, hasSubmittedRating]);
+
+  // Intercept chat messages to filter abusive language
+  useEffect(() => {
+    const interceptChatMessages = () => {
+      // Find chat input field
+      const findChatInput = () => {
+        // LiveKit chat input can be in various places
+        const selectors = [
+          'input[type="text"][placeholder*="message" i]',
+          'textarea[placeholder*="message" i]',
+          '[data-lk-chat-input]',
+          'input[aria-label*="message" i]',
+          '.lk-chat-form input',
+          '.lk-chat-form textarea',
+          'form input[type="text"]',
+          'form textarea'
+        ];
+
+        for (const selector of selectors) {
+          const inputs = document.querySelectorAll(selector);
+          for (const input of inputs) {
+            // Check if it's inside a chat panel
+            if (input.closest('[data-lk-chat], .lk-chat, [class*="chat"]')) {
+              return input;
+            }
+          }
+        }
+        return null;
+      };
+
+      const bindChatInput = () => {
+        const chatInput = findChatInput();
+        if (!chatInput || chatInput.hasAttribute('data-profanity-bound')) {
+          return;
+        }
+
+        chatInput.setAttribute('data-profanity-bound', 'true');
+        chatInputRef.current = chatInput;
+
+        // Intercept form submission
+        const chatForm = chatInput.closest('form');
+        if (chatForm) {
+          // Store original handler
+          const originalSubmitHandler = chatForm.onsubmit;
+          
+          chatForm.addEventListener('submit', (e) => {
+            const message = chatInput.value || chatInput.textContent || '';
+            
+            if (containsProfanity(message)) {
+              // Block the message
+              e.preventDefault();
+              e.stopPropagation();
+              
+              const errorMsg = getProfanityErrorMessage();
+              setProfanityWarning(errorMsg);
+              
+              // Clear the input
+              chatInput.value = '';
+              if (chatInput.textContent) chatInput.textContent = '';
+              
+              // Hide warning after 5 seconds
+              setTimeout(() => setProfanityWarning(null), 5000);
+              
+              return false;
+            }
+
+            // If no profanity, allow submission
+            // Don't prevent default, let the form submit normally
+          }, true);
+        }
+
+        // Also intercept Enter key
+        chatInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            const message = chatInput.value || chatInput.textContent || '';
+            
+            if (containsProfanity(message)) {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              const errorMsg = getProfanityErrorMessage();
+              setProfanityWarning(errorMsg);
+              
+              // Clear the input
+              chatInput.value = '';
+              if (chatInput.textContent) chatInput.textContent = '';
+              
+              // Hide warning after 5 seconds
+              setTimeout(() => setProfanityWarning(null), 5000);
+              
+              return false;
+            }
+          }
+        }, true);
+
+        // Intercept send button clicks
+        const sendButton = chatForm?.querySelector('button[type="submit"], button[aria-label*="send" i], [data-lk-send]');
+        if (sendButton) {
+          sendButton.addEventListener('click', (e) => {
+            const message = chatInput.value || chatInput.textContent || '';
+            
+            if (containsProfanity(message)) {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              const errorMsg = getProfanityErrorMessage();
+              setProfanityWarning(errorMsg);
+              
+              // Clear the input
+              chatInput.value = '';
+              if (chatInput.textContent) chatInput.textContent = '';
+              
+              // Hide warning after 5 seconds
+              setTimeout(() => setProfanityWarning(null), 5000);
+              
+              return false;
+            }
+          }, true);
+        }
+      };
+
+      // Try to bind immediately
+      bindChatInput();
+
+      // Also observe for dynamically added chat elements
+      const observer = new MutationObserver(() => {
+        bindChatInput();
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+
+      return () => {
+        observer.disconnect();
+      };
+    };
+
+    // Wait a bit for LiveKit to render
+    const timeout = setTimeout(() => {
+      interceptChatMessages();
+    }, 1000);
+
+    return () => {
+      clearTimeout(timeout);
+    };
+  }, [token]);
+
+  // Screen recording detection and prevention (only for external recording, not screen share/tab switch)
+  useEffect(() => {
+    if (!token) return;
+
+    // Add anti-recording indicators (visual watermarks only)
+    addAntiRecordingIndicators();
+
+    // Detect recording attempts (but allow screen share and tab switching)
+    const detection = detectRecordingAttempts();
+    recordingDetectionRef.current = detection;
+
+    // Don't monitor visibility changes - tab switching is allowed
+    // const handleVisibilityChange = (info) => {
+    //   // Tab switching is allowed, no warning needed
+    // };
+    // detectVisibilityChanges(handleVisibilityChange); // Commented out
+
+    // Periodic check for external recording (but exclude screen share and tab switch)
+    const checkInterval = setInterval(() => {
+      if (detection.isRecording && detection.methods.length > 0) {
+        // Only warn for external recording methods, not screen share or tab switch
+        const allowedMethods = ['Screen Sharing', 'Tab Switch'];
+        const filteredMethods = detection.methods.filter(m => !allowedMethods.includes(m));
+        
+        if (filteredMethods.length > 0) {
+          const warning = getRecordingWarningMessage(filteredMethods);
+          setRecordingWarning(warning);
+        }
+      }
+    }, 3000); // Check every 3 seconds
+
+    // Don't intercept getDisplayMedia API - screen sharing is allowed
+    // if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+    //   // Screen sharing is allowed, no interception needed
+    // }
+
+    // Detect DevTools (external recording indicator)
+    let devtools = {
+      open: false,
+      orientation: null
+    };
+
+    const devtoolsCheck = setInterval(() => {
+      const widthThreshold = window.outerWidth - window.innerWidth > 160;
+      const heightThreshold = window.outerHeight - window.innerHeight > 160;
+      
+      if (widthThreshold || heightThreshold) {
+        if (!devtools.open) {
+          devtools.open = true;
+          // Only warn if DevTools is used for recording, not for debugging
+          const warning = getRecordingWarningMessage(['Developer Tools']);
+          setRecordingWarning(warning);
+          // Auto-hide after 5 seconds
+          setTimeout(() => setRecordingWarning(null), 5000);
+        }
+      } else {
+        devtools.open = false;
+      }
+    }, 500);
+
+    return () => {
+      clearInterval(checkInterval);
+      clearInterval(devtoolsCheck);
+    };
+  }, [token]);
 
   // Ensure built-in LiveKit Leave button redirects (solver) or opens rating (asker without rating)
   useEffect(() => {
@@ -192,7 +412,23 @@ const LiveKitMeeting = () => {
   }
 
   return (
-    <div data-lk-theme="default" className="h-screen bg-black relative">
+    <div 
+      data-lk-theme="default" 
+      className="h-screen bg-black relative"
+      onContextMenu={(e) => {
+        // Prevent right-click on the entire meeting area
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          return false;
+        }
+      }}
+      style={{
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        MozUserSelect: 'none',
+        msUserSelect: 'none'
+      }}
+    >
       <LiveKitRoom
         token={token}
         serverUrl={LIVEKIT_URL}
@@ -212,6 +448,57 @@ const LiveKitMeeting = () => {
       >
         <VideoConference />
       </LiveKitRoom>
+
+      {/* Profanity Warning Toast */}
+      {profanityWarning && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[60] bg-red-600 text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in">
+          <AlertCircle className="w-5 h-5 flex-shrink-0" />
+          <span className="font-medium">{profanityWarning}</span>
+        </div>
+      )}
+
+      {/* Screen Recording Warning Toast */}
+      {recordingWarning && (
+        <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-[60] bg-orange-600 text-white px-6 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in">
+          <Shield className="w-5 h-5 flex-shrink-0" />
+          <span className="font-medium">{recordingWarning}</span>
+        </div>
+      )}
+
+      {/* Visual Watermark Overlay - Anti-Recording */}
+      <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
+        <div 
+          className="absolute top-4 left-4 text-white/30 text-xs font-mono select-none"
+          style={{
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none'
+          }}
+        >
+          EduFoyer Session - {new Date().toISOString().split('T')[0]}
+        </div>
+        <div 
+          className="absolute bottom-4 right-4 text-white/30 text-xs font-mono select-none"
+          style={{
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none'
+          }}
+        >
+          Private Session - Do Not Record
+        </div>
+        {/* Diagonal watermark pattern */}
+        <div 
+          className="absolute inset-0 opacity-5 pointer-events-none"
+          style={{
+            background: 'repeating-linear-gradient(45deg, transparent, transparent 100px, rgba(255,255,255,0.1) 100px, rgba(255,255,255,0.1) 200px)',
+            userSelect: 'none',
+            WebkitUserSelect: 'none'
+          }}
+        />
+      </div>
 
       {/* Session timer top-left */}
       {remainingSecs != null && remainingSecs > 0 && (
