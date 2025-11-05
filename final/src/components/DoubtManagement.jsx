@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Eye, CheckCircle, XCircle, Clock, Video, Plus, ArrowLeft, Home, Users, BookOpen, Search, LogOut, Bell, Share2, Building2, UserPlus, Calendar } from 'lucide-react';
+import { MessageCircle, Eye, CheckCircle, XCircle, Clock, Video, ArrowLeft, Home, Users, BookOpen, Search, LogOut, Bell, Share2, Building2, UserPlus, Calendar } from 'lucide-react';
 import { DoubtStatusBadge, ResolutionStatusBadge, StarRating } from './StatusBadges';
 import doubtService from '../services/doubtService';
 import solverService from '../services/solverService';
@@ -308,22 +308,22 @@ const DoubtManagement = () => {
     const isAvailable = type === 'available';
     
     return (
-      <div key={doubt._id} className={`rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow ${
+      <div key={doubt._id} className={`rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow overflow-hidden ${
         isAvailable 
           ? 'bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 hover:shadow-lg' 
           : 'bg-white border-gray-200 hover:shadow-md'
       }`}>
         <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
-              <h3 className="text-lg font-semibold text-gray-800">{doubt.subject}</h3>
+              <h3 className="text-lg font-semibold text-gray-800 break-words">{doubt.subject}</h3>
               {isAvailable && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   Available
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-600 line-clamp-2">{doubt.description}</p>
+            <p className="text-sm text-gray-600 break-words break-all overflow-hidden">{doubt.description}</p>
           </div>
           <div className="ml-4 flex flex-col items-end space-y-2">
             <DoubtStatusBadge status={doubt.status} />
@@ -566,16 +566,12 @@ const DoubtManagement = () => {
           <div>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-gray-800">My Doubts</h2>
-              <div className="flex space-x-2">
+                  <div className="flex space-x-2">
                 <button 
                   onClick={fetchMyDoubts}
                   className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
                 >
                   Refresh
-                </button>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Ask New Doubt
                 </button>
               </div>
             </div>
