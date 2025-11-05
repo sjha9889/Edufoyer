@@ -31,7 +31,8 @@ import {
   Zap,
   HelpCircle,
   ChevronRight,
-  ArrowRight as ArrowRightIcon
+  ArrowRight as ArrowRightIcon,
+  ArrowLeft
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import authService from '../services/authService';
@@ -567,12 +568,19 @@ const SocialDashboard = () => {
       <div className="flex-1 flex">
         {/* Center Content */}
         <div className="flex-1 max-w-2xl">
-          {currentPage === 'feed' && (
+        {currentPage === 'feed' && (
             <>
               {/* Top Search and Post */}
               <div className="bg-white p-6 border-b border-gray-200">
-                <div className="flex items-center space-x-4">
-                  <div className="flex-1 relative">
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                  <span className="font-medium">Back to Dashboard</span>
+                </button>
+                <div className="flex-1 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
                       type="text"

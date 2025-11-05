@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Eye, CheckCircle, XCircle, Clock, Video, Plus } from 'lucide-react';
+import { MessageCircle, Eye, CheckCircle, XCircle, Clock, Video, Plus, ArrowLeft, Home, Users, BookOpen, Search, LogOut, Bell, Share2, Building2, UserPlus, Calendar } from 'lucide-react';
 import { DoubtStatusBadge, ResolutionStatusBadge, StarRating } from './StatusBadges';
 import doubtService from '../services/doubtService';
 import solverService from '../services/solverService';
@@ -22,6 +22,28 @@ const DoubtManagement = () => {
   const seenAvailableIdsRef = useRef(new Set());
   const pollingRef = useRef(null);
   const [toast, setToast] = useState(null);
+  const [user, setUser] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        if (!authService.isAuthenticated()) {
+          navigate('/');
+          return;
+        }
+        const userData = await authService.getProfile();
+        setUser(userData);
+      } catch (e) {
+        console.error('Error fetching user data:', e);
+        authService.logout();
+        navigate('/');
+      } finally {
+        setIsAuthLoading(false);
+      }
+    };
+    fetchUserData();
+  }, [navigate]);
 
   const fetchMyDoubts = async () => {
     try {
@@ -74,6 +96,14 @@ const DoubtManagement = () => {
       setIsLoading(true);
       setError(null);
       try {
+        if (!authService.isAuthenticated()) {
+          navigate('/');
+          return;
+        }
+        if (localStorage.getItem('cacheVerified') !== 'true') {
+          navigate('/verify-cache');
+          return;
+        }
         await Promise.all([
           fetchMyDoubts(),
           fetchAvailableDoubts(),
@@ -384,9 +414,85 @@ const DoubtManagement = () => {
       </div>
     );
   }
+  
+  // Sidebar items similar to SolvedDoubtsPage
+  const getSidebarItems = () => {
+    const userId = user?.id || 'default_user';
+    const baseItems = [
+      { icon: Home, label: 'Home', path: '/dashboard' },
+      { icon: BookOpen, label: 'My Doubts', active: true, path: '/dashboard/doubts' },
+      { icon: BookOpen, label: 'Solved Doubts', path: '/dashboard/solved-doubts' },
+      { icon: Share2, label: 'Educational Social', path: `/dashboard/social/${userId}` },
+      { icon: Building2, label: 'Corporate Connect', path: '/dashboard/corporate-connect' },
+      { icon: UserPlus, label: 'Online Referral System', path: '/dashboard/referral-system' },
+      { icon: Calendar, label: 'Previous Year Live', path: '/dashboard/pyq' },
+      { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
+      { icon: LogOut, label: 'Logout', onClick: async () => { try { await authService.logout(); navigate('/'); } catch { navigate('/'); } } }
+    ];
+    if (user?.role === 'admin') {
+      baseItems.splice(-1, 0, { icon: Users, label: 'Admin Panel', path: '/admin/panel' });
+    }
+    return baseItems;
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <div className="w-64 bg-white shadow-sm border-r border-gray-200">
+        <div className="p-6">
+          <h1 className="text-xl font-semibold text-gray-800">
+            Hi <span className="text-blue-500">{user?.name || 'User'}</span>
+          </h1>
+        </div>
+        <nav className="mt-6">
+          {getSidebarItems().map((item, index) => (
+            <div
+              key={index}
+              onClick={() => {
+                if (item.onClick) {
+                  item.onClick();
+                } else if (item.path) {
+                  navigate(item.path);
+                }
+              }}
+              className={`flex items-center px-6 py-3 text-gray-600 hover:bg-gray-50 cursor-pointer relative ${
+                item.active ? 'text-blue-500 bg-blue-50 border-r-2 border-blue-500' : ''
+              } ${item.label === 'Logout' ? 'text-red-600 hover:text-red-700 hover:bg-red-50' : ''}`}
+            >
+              <item.icon className="w-5 h-5 mr-3" />
+              <span className="font-medium">{item.label}</span>
+            </div>
+          ))}
+        </nav>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 overflow-hidden">
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4 flex-1 max-w-2xl">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium">Back to Dashboard</span>
+              </button>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search your doubts..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="p-6 overflow-y-auto h-full">
       {toast && (
         <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg">
           <div className="flex items-center gap-2">
@@ -423,8 +529,8 @@ const DoubtManagement = () => {
           </div>
         </div>
       )}
-      {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
+          {/* Tabs */}
+          <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
         <button
           onClick={() => setActiveTab('my-doubts')}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -452,10 +558,10 @@ const DoubtManagement = () => {
           }`}>
           Assigned ({assignedDoubts.length})
         </button>
-      </div>
+          </div>
 
-      {/* Content */}
-      <div>
+          {/* Lists */}
+          <div className="mt-6">
         {activeTab === 'my-doubts' && (
           <div>
             <div className="flex items-center justify-between mb-6">
@@ -517,6 +623,8 @@ const DoubtManagement = () => {
             )}
           </div>
         )}
+          </div>
+        </div>
       </div>
     </div>
   );

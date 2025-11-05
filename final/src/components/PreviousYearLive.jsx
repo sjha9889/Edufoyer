@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Users, Video, Clock, CheckCircle } from 'lucide-react';
+import { Calendar, Users, Video, Clock, CheckCircle, ArrowLeft } from 'lucide-react';
 import livekitService from '../services/livekitService';
 import { useNavigate } from 'react-router-dom';
 
@@ -49,6 +49,15 @@ const PreviousYearLive = () => {
 
   return (
     <div className="max-w-2xl mx-auto p-6">
+      <div className="mb-4">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span className="font-medium">Back to Dashboard</span>
+        </button>
+      </div>
       <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
         <Video className="w-6 h-6 text-green-600" />
         Live Previous Year Solution

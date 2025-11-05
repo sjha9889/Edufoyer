@@ -19,7 +19,8 @@ const LoginModal = () => {
   // Check if user is already logged in
   useEffect(() => {
     if (authService.isAuthenticated()) {
-      navigate('/dashboard');
+      const isCacheVerified = localStorage.getItem('cacheVerified') === 'true';
+      navigate(isCacheVerified ? '/dashboard' : '/verify-cache');
     }
   }, [navigate]);
 
@@ -31,7 +32,8 @@ const LoginModal = () => {
     try {
       const result = await authService.login(email, password);
       if (result.success) {
-        navigate('/dashboard');
+        localStorage.removeItem('cacheVerified');
+        navigate('/verify-cache');
       }
     } catch (error) {
       setError(error.message || 'Login failed. Please try again.');
@@ -53,7 +55,8 @@ const LoginModal = () => {
           setPendingEmail(email);
           setShowEmailVerification(true);
         } else {
-          navigate('/dashboard');
+          localStorage.removeItem('cacheVerified');
+          navigate('/verify-cache');
         }
       }
     } catch (error) {
@@ -75,7 +78,8 @@ const LoginModal = () => {
     // Store token and user data
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
-    navigate('/dashboard');
+    localStorage.removeItem('cacheVerified');
+    navigate('/verify-cache');
   };
 
   const handleResendVerification = () => {

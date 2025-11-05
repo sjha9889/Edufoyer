@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Bell, CheckCircle, MessageSquare, AlertTriangle, Clock, User, Video } from 'lucide-react';
+import { Bell, CheckCircle, MessageSquare, AlertTriangle, Clock, User, Video, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import notificationService from '../services/notificationService';
 
 // Simple date formatting function
@@ -15,10 +16,33 @@ const formatTimeAgo = (date) => {
 };
 
 const NotificationList = () => {
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMarkingRead, setIsMarkingRead] = useState(false);
+
+  const linkifyText = (text) => {
+    if (!text) return text;
+    const urlRegex = /(https?:\/\/[\w\-._~:/?#[\]@!$&'()*+,;=%]+)/g;
+    const parts = String(text).split(urlRegex);
+    return parts.map((part, idx) => {
+      if (urlRegex.test(part)) {
+        return (
+          <a
+            key={`url-${idx}`}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-700 underline break-all"
+          >
+            {part}
+          </a>
+        );
+      }
+      return <span key={`text-${idx}`}>{part}</span>;
+    });
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -98,26 +122,39 @@ const NotificationList = () => {
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div className="px-6 pt-2 md:pt-4 pb-10">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden w-full max-w-7xl mx-auto mt-0">
       {/* Header */}
-      <div className="flex justify-between items-center p-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-          <Bell className="h-5 w-5 mr-2" />
-          Notifications
-          {unreadCount > 0 && (
-            <span className="ml-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-              {unreadCount}
-            </span>
-          )}
-        </h3>
-        {unreadCount > 0 && (
-          <button
-            onClick={markAllAsRead}
-            disabled={isMarkingRead}
-            className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50">
-            {isMarkingRead ? 'Marking...' : 'Mark all as read'}
-          </button>
-        )}
+        <div className="flex justify-between items-center p-4 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="font-medium">Back</span>
+            </button>
+            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+              <Bell className="h-5 w-5 mr-2" />
+              Notifications
+              {unreadCount > 0 && (
+                <span className="ml-2 bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2 py-0.5 rounded-full">
+                  {unreadCount} new
+                </span>
+              )}
+            </h3>
+          </div>
+          <div>
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllAsRead}
+                disabled={isMarkingRead}
+                className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
+              >
+                {isMarkingRead ? 'Marking...' : 'Mark all as read'}
+              </button>
+            )}
+          </div>
       </div>
 
       {/* Notifications List */}
@@ -130,7 +167,7 @@ const NotificationList = () => {
           </p>
         </div>
       ) : (
-        <div className="max-h-96 overflow-y-auto">
+        <div className="max-h-[80vh] overflow-y-auto pb-6">
           {notifications.map((notification) => (
             <div
               key={notification._id}
@@ -144,7 +181,7 @@ const NotificationList = () => {
                 <p className={`text-sm ${
                   !notification.is_read ? 'text-gray-900 font-medium' : 'text-gray-700'
                 }`}>
-                  {notification.content}
+                  {linkifyText(notification.content)}
                 </p>
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-xs text-gray-500">
@@ -159,6 +196,7 @@ const NotificationList = () => {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 };

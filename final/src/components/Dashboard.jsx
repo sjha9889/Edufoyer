@@ -30,6 +30,11 @@ const Dashboard = () => {
           navigate('/');
           return;
         }
+        const isCacheVerified = localStorage.getItem('cacheVerified') === 'true';
+        if (!isCacheVerified) {
+          navigate('/verify-cache');
+          return;
+        }
 
         const userData = await authService.getProfile();
         setUser(userData);

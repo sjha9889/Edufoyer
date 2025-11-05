@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Home, Users, BookOpen, Search, LogOut, Bell, Share2, Building2, UserPlus, Calendar } from 'lucide-react';
+import { Home, Users, BookOpen, Search, LogOut, Bell, Share2, Building2, UserPlus, Calendar, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import SolvedDoubtsList from './SolvedDoubtsList';
@@ -14,6 +14,10 @@ const SolvedDoubtsPage = () => {
       try {
         if (!authService.isAuthenticated()) {
           navigate('/');
+          return;
+        }
+        if (localStorage.getItem('cacheVerified') !== 'true') {
+          navigate('/verify-cache');
           return;
         }
 
@@ -117,8 +121,15 @@ const SolvedDoubtsPage = () => {
         {/* Header */}
         <div className="bg-white border-b border-gray-200 p-6">
           <div className="flex items-center justify-between">
-            <div className="flex-1 max-w-2xl">
-              <div className="relative">
+            <div className="flex items-center gap-4 flex-1 max-w-2xl">
+              <button
+                onClick={() => navigate('/dashboard')}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="font-medium">Back to Dashboard</span>
+              </button>
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type="text"

@@ -21,6 +21,7 @@ import LandingPage from './components/LandingPage'
 import AdminPanel from './components/AdminPanel'
 import AdminLogin from './components/AdminLogin'
 import AdminDashboard from './components/AdminDashboard'
+import VerifyCache from './components/VerifyCache'
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
           <Route path="/auth" element={<LoginModal />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/verify-cache" element={<VerifyCache />} />
           <Route path="/dashboard/doubts" element={<DoubtManagement />} />
           <Route path="/dashboard/notifications" element={<NotificationList />} />
           <Route path="/dashboard/awaiting/:doubtId" element={<AwaitingSolverPage />} />
