@@ -134,6 +134,7 @@ import notificationRoutes from './routes/notification.js';
 import livekitRoutes from './routes/livekit.js';
 import socialRoutes from './routes/social.js';
 import adminRoutes from './routes/admin.js';
+import walletRoutes from './routes/wallet.js';
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -144,6 +145,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/livekit', livekitRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/wallet', walletRoutes);
 
 // Serve frontend build (single-port setup) if available
 const frontendDistPath = path.resolve(__dirname, '../final/dist');

@@ -7,6 +7,7 @@ import { io } from 'socket.io-client';
 import AskDoubt from './AskDoubt';
 import DoubtSidebar from './DoubtSidebar';
 import SolverRegistration from './SolverRegistration';
+import WalletDisplay from './WalletDisplay';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Overall');
@@ -388,6 +389,8 @@ const Dashboard = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Wallet Display */}
+            <WalletDisplay />
 
             {/* Performance Chart */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

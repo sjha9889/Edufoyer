@@ -4,6 +4,7 @@ import SolverDoubts from '../../models/SolverDoubts.js';
 import { createNotification } from '../notification/createNotification.js';
 import Solver from '../../models/Solver.js';
 import { getIO } from '../../socket.js';
+import { creditCoinsToSolver } from '../wallet/creditCoins.js';
 
 const SubmitFeedbackSchema = z.object({
   doubtId: z.string().min(1, 'Doubt ID is required'),
@@ -61,6 +62,7 @@ export async function submitFeedback(formData, userId) {
     }
 
     // Increment solver stats only once on first completion
+    let coinInfo = null;
     if (!isAlreadyCompleted) {
       const solver = await Solver.findOne({ user_id: doubt.solver_id });
       if (solver) {
@@ -70,14 +72,24 @@ export async function submitFeedback(formData, userId) {
           { new: true }
         );
       }
+
+      // Credit coins to solver's wallet based on average rating
+      coinInfo = await creditCoinsToSolver(doubt.solver_id, doubtId);
+      if (coinInfo.success) {
+        console.log(`Credited ${coinInfo.coins} coins to solver ${doubt.solver_id}. New balance: ${coinInfo.balance}`);
+      }
     }
 
     // Notify solver
+    const notificationContent = coinInfo?.success 
+      ? `Your solution has been rated. You earned ${coinInfo.coins} coins! (Balance: ${coinInfo.balance} coins)`
+      : 'Your solution has been rated by the student.';
+    
     await createNotification({
       userId: doubt.solver_id,
       doubtId,
       messageType: 'SOLUTION_ACCEPTED',
-      content: 'Your solution has been rated by the student.',
+      content: notificationContent,
     });
 
     // Emit realtime update so dashboard refreshes metrics

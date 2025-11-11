@@ -69,6 +69,7 @@ export async function createDoubt(formData, userId) {
       subject: finalSubject,
       description: finalDescription,
       image: imagePath,
+      category: finalCategory || 'medium', // Set the category from form data
       doubter_id: userId,
       status: "open",
     });
