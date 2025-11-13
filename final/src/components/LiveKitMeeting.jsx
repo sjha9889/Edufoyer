@@ -589,7 +589,7 @@ const LiveKitMeeting = () => {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowCompletionModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-gray-700"
                 disabled={completing}
               >
                 Cancel
