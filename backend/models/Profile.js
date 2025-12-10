@@ -50,6 +50,11 @@ ProfileSchema.pre('save', function(next) {
   next();
 });
 
+// Indexes for better query performance
+ProfileSchema.index({ userId: 1 }); // Already unique, but explicit index helps
+ProfileSchema.index({ strongSubject: 1 }); // For subject-based queries
+ProfileSchema.index({ universityName: 1 }); // For university-based queries
+
 const Profile = mongoose.model('Profile', ProfileSchema);
 
 export default Profile;

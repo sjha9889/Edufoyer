@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { Clock, User, Bell, CheckCircle, AlertCircle, RefreshCw, Video } from 'lucide-react';
+import { Clock, User, Bell, CheckCircle, AlertCircle, RefreshCw, Video, Calendar } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import notificationService from '../services/notificationService';
 import doubtService from '../services/doubtService';
@@ -200,10 +200,10 @@ const AwaitingSolverPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading doubt details...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 dark:border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading doubt details...</p>
         </div>
       </div>
     );
@@ -211,14 +211,14 @@ const AwaitingSolverPage = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center max-w-md">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-800 mb-2">Error Loading Doubt</h3>
-          <p className="text-gray-600 mb-4">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-300 dark:border-gray-600 p-8 text-center max-w-md transition-colors duration-300">
+          <AlertCircle className="w-12 h-12 text-red-500 dark:text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">Error Loading Doubt</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4 transition-colors duration-300">{error}</p>
           <button
             onClick={() => window.location.reload()}
-            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+            className="bg-blue-500 dark:bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 transition-colors"
           >
             Try Again
           </button>
@@ -228,24 +228,24 @@ const AwaitingSolverPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-6">
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-6 transition-colors duration-300">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Awaiting Solver</h1>
-              <p className="text-gray-600 mt-1">Your doubt is waiting for a solver to accept it</p>
-              <p className="mt-1"><span className="font-bold text-gray-800">please keep refreshing</span></p>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100 transition-colors duration-300">Awaiting Solver</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 transition-colors duration-300">Your doubt is waiting for a solver to accept it</p>
+            <div className="mt-1 flex items-center gap-2">
+              <span className="font-bold text-gray-800 dark:text-gray-200 transition-colors duration-300">Please keep refreshing</span>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex items-center space-x-1 bg-blue-500 dark:bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-600 dark:hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
             </div>
-            <button
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="flex items-center space-x-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 disabled:opacity-50 transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span>Refresh</span>
-            </button>
           </div>
         </div>
       </div>
@@ -254,49 +254,68 @@ const AwaitingSolverPage = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Status Card */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-300 dark:border-gray-600 p-8 transition-colors duration-300">
               <div className="text-center">
-                <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Clock className="w-10 h-10 text-blue-500" />
+                <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-6 transition-colors duration-300">
+                  <Clock className="w-10 h-10 text-blue-500 dark:text-blue-400" />
                 </div>
                 
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Waiting for Solver</h2>
-                <p className="text-gray-600 mb-6">
+                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">Waiting for Solver</h2>
+                <p className="text-gray-600 dark:text-gray-400 mb-6 transition-colors duration-300">
                   Your doubt has been submitted and is being matched with available solvers.
                 </p>
 
                 {/* Doubt Details */}
                 {doubt && (
-                  <div className="bg-gray-50 rounded-lg p-6 mb-6 text-left">
-                    <h3 className="font-semibold text-gray-800 mb-2">Doubt Details</h3>
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-6 mb-6 text-left transition-colors duration-300">
+                    <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">Doubt Details</h3>
                     <div className="space-y-2">
                       <div>
-                        <span className="text-sm text-gray-600">Subject:</span>
-                        <span className="ml-2 font-medium">{doubt.subject}</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Subject:</span>
+                        <span className="ml-2 font-medium text-gray-800 dark:text-gray-200">{doubt.subject}</span>
                       </div>
                       <div>
-                        <span className="text-sm text-gray-600">Category:</span>
-                        <span className="ml-2 font-medium capitalize">{doubt.category}</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Category:</span>
+                        <span className="ml-2 font-medium capitalize text-gray-800 dark:text-gray-200">{doubt.category}</span>
                       </div>
+                      {doubt.is_scheduled && doubt.scheduled_date && (
+                        <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800">
+                          <div className="flex items-center space-x-2 text-purple-700 dark:text-purple-300 mb-1">
+                            <Calendar className="w-4 h-4" />
+                            <span className="font-semibold text-sm">Scheduled Date & Time:</span>
+                          </div>
+                          <div className="text-sm text-purple-800 dark:text-purple-200 ml-6">
+                            {new Date(doubt.scheduled_date).toLocaleDateString('en-IN', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })} at {doubt.scheduled_time || new Date(doubt.scheduled_date).toLocaleTimeString('en-IN', { 
+                              hour: '2-digit', 
+                              minute: '2-digit' 
+                            })}
+                          </div>
+                        </div>
+                      )}
                       <div>
-                        <span className="text-sm text-gray-600">Description:</span>
-                        <p className="mt-1 text-sm text-gray-700">{doubt.description}</p>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Description:</span>
+                        <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{doubt.description}</p>
                       </div>
                     </div>
                   </div>
                 )}
 
                 {/* Time Elapsed */}
-                <div className="bg-blue-50 rounded-lg p-4 mb-6">
-                  <div className="flex items-center justify-center space-x-2 text-blue-700">
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6 transition-colors duration-300">
+                  <div className="flex items-center justify-center space-x-2 text-blue-700 dark:text-blue-300">
                     <Clock className="w-5 h-5" />
                     <span className="font-semibold">Time Elapsed: {formatTimeElapsed(timeElapsed)}</span>
                   </div>
                 </div>
 
                 {/* Status Message */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2 text-yellow-700">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 transition-colors duration-300">
+                  <div className="flex items-center space-x-2 text-yellow-700 dark:text-yellow-300">
                     <AlertCircle className="w-5 h-5" />
                     <span className="font-medium">Please wait while we find a suitable solver for your doubt.</span>
                   </div>
@@ -308,16 +327,16 @@ const AwaitingSolverPage = () => {
           {/* Notifications Sidebar */}
           <div className="space-y-6">
             {/* Live Notifications */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-300 dark:border-gray-600 p-6 transition-colors duration-300">
               <div className="flex items-center space-x-2 mb-4">
-                <Bell className="w-5 h-5 text-blue-500" />
-                <h3 className="font-semibold text-gray-800">Live Updates</h3>
+                <Bell className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+                <h3 className="font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-300">Live Updates</h3>
               </div>
               
               {notifications.length === 0 ? (
                 <div className="text-center py-4">
-                  <Bell className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No updates yet</p>
+                  <Bell className="w-8 h-8 text-gray-400 dark:text-gray-600 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No updates yet</p>
                 </div>
               ) : (
                 <div className="space-y-3 max-h-64 overflow-y-auto">
@@ -326,23 +345,23 @@ const AwaitingSolverPage = () => {
                     .map((notification) => (
                       <div
                         key={notification._id}
-                        className={`p-3 rounded-lg border ${
+                        className={`p-3 rounded-lg border transition-colors duration-300 ${
                           notification.message_type === 'DOUBT_ASSIGNED'
-                            ? 'bg-green-50 border-green-200'
-                            : 'bg-blue-50 border-blue-200'
+                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                            : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
                         }`}
                       >
                         <div className="flex items-start space-x-2">
                           {notification.message_type === 'DOUBT_ASSIGNED' ? (
-                            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                            <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400 mt-0.5" />
                           ) : (
-                            <Bell className="w-4 h-4 text-blue-500 mt-0.5" />
+                            <Bell className="w-4 h-4 text-blue-500 dark:text-blue-400 mt-0.5" />
                           )}
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-800">
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 transition-colors duration-300">
                               {notification.content}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-300">
                               {new Date(notification.createdAt).toLocaleTimeString()}
                             </p>
                           </div>
@@ -354,48 +373,48 @@ const AwaitingSolverPage = () => {
             </div>
 
             {/* What Happens Next */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h3 className="font-semibold text-gray-800 mb-4">What happens next?</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border-2 border-gray-300 dark:border-gray-600 p-6 transition-colors duration-300">
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-4 transition-colors duration-300">What happens next?</h3>
               <div className="space-y-3">
                 <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-semibold text-blue-600">1</span>
+                  <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors duration-300">
+                    <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">1</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-800">Solver Notification</p>
-                    <p className="text-xs text-gray-600">Available solvers are notified about your doubt</p>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 transition-colors duration-300">Solver Notification</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 transition-colors duration-300">Available solvers are notified about your doubt</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-semibold text-blue-600">2</span>
+                  <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors duration-300">
+                    <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">2</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-800">Solver Accepts</p>
-                    <p className="text-xs text-gray-600">A solver reviews and accepts your doubt</p>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 transition-colors duration-300">Solver Accepts</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 transition-colors duration-300">A solver reviews and accepts your doubt</p>
                   </div>
                 </div>
                 
                 <div className="flex items-start space-x-3">
-                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-semibold text-blue-600">3</span>
+                  <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors duration-300">
+                    <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">3</span>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-800">Session Ready</p>
-                    <p className="text-xs text-gray-600">You can join after clicking Accept/Join in the popup</p>
+                    <p className="text-sm font-medium text-gray-800 dark:text-gray-200 transition-colors duration-300">Session Ready</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 transition-colors duration-300">You can join after clicking Accept/Join in the popup</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Help Section */}
-            <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
-              <h3 className="font-semibold text-blue-800 mb-2">Need Help?</h3>
-              <p className="text-sm text-blue-700 mb-3">
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-blue-300 dark:border-blue-600 p-6 transition-colors duration-300">
+              <h3 className="font-semibold text-blue-800 dark:text-blue-300 mb-2 transition-colors duration-300">Need Help?</h3>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mb-3 transition-colors duration-300">
                 If no solver accepts your doubt within 30 minutes, it will be automatically reassigned.
               </p>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              <button className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors">
                 Contact Support
               </button>
             </div>

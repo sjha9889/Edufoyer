@@ -2,6 +2,7 @@ import express from 'express';
 import { protect } from '../middleware/auth.js';
 import { createProfile } from '../actions/profile/createProfile.js';
 import { getProfile } from '../actions/profile/getProfile.js';
+import cache from '../utils/cache.js';
 
 const router = express.Router();
 
@@ -13,6 +14,8 @@ router.post('/create', protect, async (req, res) => {
     const result = await createProfile(req.body, req.user.id);
     
     if (result.success) {
+      // Invalidate cache for this user's profile
+      cache.delete(`profile:${req.user.id}`);
       res.status(201).json({ success: true, message: 'Profile created successfully' });
     } else {
       res.status(400).json({ success: false, error: result.error });

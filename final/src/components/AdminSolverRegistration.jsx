@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { UserPlus, Mail, BookOpen, CheckCircle, X, Shield } from 'lucide-react';
+import { UserPlus, Mail, BookOpen, CheckCircle, X, Shield, Loader2 } from 'lucide-react';
 import adminService from '../services/adminService';
 
-const AdminSolverRegistration = ({ defaultOpen = false }) => {
+const AdminSolverRegistration = ({ defaultOpen = false, inline = false, onSolverRegistered }) => {
   const [isFormOpen, setIsFormOpen] = useState(defaultOpen);
   const [formData, setFormData] = useState({
     name: '',
@@ -70,6 +70,10 @@ const AdminSolverRegistration = ({ defaultOpen = false }) => {
         setTimeout(() => {
           setMessage('');
         }, 5000);
+        // Call callback if provided
+        if (onSolverRegistered) {
+          onSolverRegistered();
+        }
       } else {
         setMessage(result.message || 'Registration failed. Please try again.');
       }
@@ -92,7 +96,7 @@ const AdminSolverRegistration = ({ defaultOpen = false }) => {
     setMessage('');
   };
 
-  if (!isFormOpen) {
+  if (!isFormOpen && !inline) {
     return (
       <button
         onClick={() => setIsFormOpen(true)}
@@ -104,6 +108,162 @@ const AdminSolverRegistration = ({ defaultOpen = false }) => {
     );
   }
 
+  // Inline mode - render without modal overlay
+  if (inline) {
+    return (
+      <div className="w-full">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Name Field */}
+          <div className="space-y-2">
+            <label htmlFor="name" className="block text-sm font-semibold text-gray-700">
+              Full Name *
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              className="w-full bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+              placeholder="Enter the user's full name"
+              required
+            />
+          </div>
+
+          {/* Email Field */}
+          <div className="space-y-2">
+            <label htmlFor="email" className="block text-sm font-semibold text-gray-700">
+              Email Address *
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className="w-full bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+              placeholder="Enter the user's email address"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              The user will receive notifications at this email address.
+            </p>
+          </div>
+
+          {/* Subjects Selection */}
+          <div className="space-y-3">
+            <label className="block text-sm font-semibold text-gray-700">
+              Select Expertise Areas * <span className="text-xs font-normal text-gray-500">({formData.subjects.length} selected)</span>
+            </label>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {availableSubjects.map((subject) => (
+                <label
+                  key={subject}
+                  className={`flex items-center gap-2 p-3 border-2 rounded-xl cursor-pointer transition-all ${
+                    formData.subjects.includes(subject)
+                      ? 'bg-gradient-to-br from-purple-50 to-indigo-50 border-purple-500 text-purple-700 shadow-md'
+                      : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200 hover:border-purple-300 hover:bg-purple-50/50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.subjects.includes(subject)}
+                    onChange={() => handleSubjectToggle(subject)}
+                    className="w-4 h-4 text-purple-600 focus:ring-purple-500 rounded"
+                  />
+                  <span className="text-sm font-medium flex-1">{subject}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500">
+              The user will receive notifications for doubts in these subjects.
+            </p>
+          </div>
+
+          {/* Experience Field */}
+          <div className="space-y-2">
+            <label htmlFor="experience" className="block text-sm font-semibold text-gray-700">
+              Experience Level
+            </label>
+            <select
+              id="experience"
+              name="experience"
+              value={formData.experience}
+              onChange={handleInputChange}
+              className="w-full bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition-all"
+            >
+              <option value="">Select experience level</option>
+              <option value="beginner">Beginner (0-1 years)</option>
+              <option value="intermediate">Intermediate (1-3 years)</option>
+              <option value="advanced">Advanced (3-5 years)</option>
+              <option value="expert">Expert (5+ years)</option>
+            </select>
+          </div>
+
+          {/* Bio Field */}
+          <div className="space-y-2">
+            <label htmlFor="bio" className="block text-sm font-semibold text-gray-700">
+              Bio (Optional)
+            </label>
+            <textarea
+              id="bio"
+              name="bio"
+              value={formData.bio}
+              onChange={handleInputChange}
+              placeholder="Tell us about the user's background and expertise..."
+              className="w-full min-h-[100px] bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 text-gray-900 rounded-xl px-4 py-3 placeholder:text-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none resize-vertical transition-all"
+            />
+          </div>
+
+          {/* Message Display */}
+          {message && (
+            <div className={`p-4 rounded-xl flex items-start gap-3 ${
+              message.includes('Successfully') 
+                ? 'bg-green-50 text-green-700 border-2 border-green-200'
+                : 'bg-red-50 text-red-700 border-2 border-red-200'
+            }`}>
+              {message.includes('Successfully') ? (
+                <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              ) : (
+                <X className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              )}
+              <span className="text-sm flex-1">{message}</span>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-3 pt-4">
+            <button
+              type="button"
+              onClick={clearForm}
+              className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+            >
+              Clear Form
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:via-purple-700 hover:to-pink-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02] disabled:transform-none flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Registering...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-5 h-5" />
+                  Register as Solver
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  // Modal mode - original implementation
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white text-gray-800 border border-gray-200 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden">

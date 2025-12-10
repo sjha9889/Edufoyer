@@ -19,28 +19,8 @@ const resolveMx = promisify(dns.resolveMx);
  * @returns {boolean} - True if domain is from known provider
  */
 export const isKnownEmailProvider = (email) => {
+  // ONLY allow KIIT domains
   const knownProviders = [
-    'gmail.com',
-    'yahoo.com',
-    'outlook.com',
-    'hotmail.com',
-    'icloud.com',
-    'protonmail.com',
-    'aol.com',
-    'live.com',
-    'msn.com',
-    'rediffmail.com',
-    'zoho.com',
-    'yandex.com',
-    'mail.com',
-    'gmx.com',
-    'web.de',
-    'tutanota.com',
-    'fastmail.com',
-    'hey.com',
-    'icloud.com',
-    'me.com',
-    'mac.com',
     'kiit.ac.in',
     'kiit.edu.in'
   ];
@@ -237,11 +217,11 @@ export const verifyEmail = async (email) => {
       };
     }
 
-    // For now, only allow known legitimate providers
+    // Only allow KIIT email domains
     if (!isKnownEmailProvider(email)) {
       return {
         isValid: false,
-        message: 'Only emails from known providers (Gmail, Yahoo, Outlook, etc.) are allowed'
+        message: 'Only @kiit.ac.in email addresses are allowed for registration.'
       };
     }
 

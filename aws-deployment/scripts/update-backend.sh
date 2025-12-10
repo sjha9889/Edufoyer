@@ -184,3 +184,11 @@ echo "  ssh -i $KEY_FILE ec2-user@$WEB_SERVER_IP 'pm2 logs educational-platform'
 
 
 
+
+
+
+
+
+
+
+

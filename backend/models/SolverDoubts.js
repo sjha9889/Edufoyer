@@ -35,6 +35,15 @@ const SolverDoubtsSchema = new mongoose.Schema({
     type: String,
     maxlength: 1000
   },
+  solver_rating_of_asker: {
+    type: Number,
+    min: 1,
+    max: 5
+  },
+  solver_comment_of_asker: {
+    type: String,
+    maxlength: 1000
+  },
   createdAt: {
     type: Date,
     default: Date.now

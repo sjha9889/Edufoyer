@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HelpCircle, Upload, X, AlertCircle } from 'lucide-react';
+import { HelpCircle, Upload, X, AlertCircle, Info, Calendar, Clock, CheckCircle } from 'lucide-react';
 import doubtService from '../services/doubtService';
 import { 
   validateTitle, 
@@ -19,6 +19,18 @@ const AskDoubt = () => {
   const [uploadedImage, setUploadedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [showSubjectMismatchPopup, setShowSubjectMismatchPopup] = useState(false);
+  const [mismatchDetails, setMismatchDetails] = useState(null);
+  const [showQuotaErrorPopup, setShowQuotaErrorPopup] = useState(false);
+  const [quotaErrorMessage, setQuotaErrorMessage] = useState('');
+  const [quotaDetails, setQuotaDetails] = useState(null);
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [showScheduledPopup, setShowScheduledPopup] = useState(false);
+  const [scheduledDoubtInfo, setScheduledDoubtInfo] = useState(null);
+  const [showCategoryDetails, setShowCategoryDetails] = useState(false);
+  const [selectedCategoryDetails, setSelectedCategoryDetails] = useState(null);
   
   // Validation errors state
   const [errors, setErrors] = useState({
@@ -61,6 +73,9 @@ const AskDoubt = () => {
     setDoubtCategory('small');
     setDoubtDescription('');
     setUploadedImage(null);
+    setIsScheduled(false);
+    setScheduledDate('');
+    setScheduledTime('');
     if (imagePreview) {
       URL.revokeObjectURL(imagePreview);
     }
@@ -94,6 +109,58 @@ const AskDoubt = () => {
     setDoubtCategory(value);
     const validation = validateCategory(value);
     setErrors(prev => ({ ...prev, category: validation.error }));
+  };
+
+  // Category details data
+  const categoryDetails = {
+    small: {
+      title: 'Quick 20-Minute Session',
+      duration: '20 minutes',
+      description: 'Perfect for quick clarifications and specific question solving.',
+      features: [
+        'Ideal for single concept clarification',
+        'Quick problem-solving sessions',
+        'Specific question answers',
+        'Fast-paced learning',
+        'Best for revision and quick doubts'
+      ],
+      bestFor: 'Students who need quick answers to specific questions or concept clarifications.',
+      pricing: 'Most affordable option'
+    },
+    medium: {
+      title: 'Medium Topic — Unpacking Concepts in 30 Minutes',
+      duration: '30 minutes',
+      description: 'Comprehensive coverage of medium-sized topics with detailed explanations.',
+      features: [
+        'In-depth concept explanation',
+        'Multiple related problems solved',
+        'Step-by-step breakdown',
+        'Interactive learning session',
+        'Better understanding of topic fundamentals'
+      ],
+      bestFor: 'Students who want to understand a complete topic or concept thoroughly.',
+      pricing: 'Moderate pricing with great value'
+    },
+    large: {
+      title: 'Large Topic — Understand the Entire Chapter in 60 Minutes',
+      duration: '60 minutes',
+      description: 'Complete chapter coverage with comprehensive learning and practice.',
+      features: [
+        'Full chapter coverage',
+        'Comprehensive topic explanation',
+        'Multiple examples and problems',
+        'Complete understanding of concepts',
+        'Practice questions and solutions',
+        'Chapter summary and key points'
+      ],
+      bestFor: 'Students preparing for exams or wanting complete mastery of a chapter.',
+      pricing: 'Best value for comprehensive learning'
+    }
+  };
+
+  const handleShowCategoryDetails = (category) => {
+    setSelectedCategoryDetails(categoryDetails[category]);
+    setShowCategoryDetails(true);
   };
 
   const handleSubmit = async (e) => {
@@ -145,15 +212,36 @@ const AskDoubt = () => {
         category: doubtCategory,
         description: doubtDescription.trim(),
         imagePath: null,
-        tags: []
+        tags: [],
+        isScheduled: isScheduled,
+        scheduledDate: isScheduled ? scheduledDate : undefined,
+        scheduledTime: isScheduled ? scheduledTime : undefined
       };
       
       const result = await doubtService.createDoubt(doubtData);
+      
+      console.log('📋 Doubt creation result:', result);
+      console.log('📅 isScheduled:', isScheduled);
+      console.log('📅 scheduledDate:', scheduledDate);
+      console.log('⏰ scheduledTime:', scheduledTime);
       
       // Check if backend returned errors
       if (!result.success) {
         if (result.fieldErrors) {
           setErrors(result.fieldErrors);
+        } else if (result.error === 'SUBJECT_MISMATCH' || result.message) {
+          // Show subject mismatch popup
+          setMismatchDetails({
+            message: result.message || 'Please ask subject-related doubts. Your doubt description does not match the selected subject.',
+            reason: result.validationDetails?.reason || '',
+            confidence: result.validationDetails?.confidence || 0,
+          });
+          setShowSubjectMismatchPopup(true);
+        } else if (result.error && (result.error.toLowerCase().includes('quota') || result.error.toLowerCase().includes('completed') || result.error.toLowerCase().includes('limit'))) {
+          // Show quota exceeded error popup
+          setQuotaErrorMessage(result.error || 'You\'ve reached your daily doubt limit. Your quota will reset after 12 AM. Please try again tomorrow!');
+          setQuotaDetails(result.quotaDetails || null);
+          setShowQuotaErrorPopup(true);
         } else {
           alert(result.error || 'Failed to submit doubt. Please check your input and try again.');
         }
@@ -161,26 +249,310 @@ const AskDoubt = () => {
         return;
       }
       
-      // Redirect to awaiting page
-      const doubtId = result.doubtId;
+      // Handle scheduled vs immediate doubts
+      const doubtId = result.doubtId || result._id || result.id;
+      const isScheduledDoubt = result.is_scheduled || result.isScheduled || isScheduled;
       
-      if (doubtId) {
+      console.log('🆔 doubtId:', doubtId);
+      console.log('📅 isScheduledDoubt:', isScheduledDoubt);
+      console.log('📅 result.is_scheduled:', result.is_scheduled);
+      console.log('📅 isScheduled (state):', isScheduled);
+      console.log('📅 scheduledDate:', scheduledDate);
+      console.log('⏰ scheduledTime:', scheduledTime);
+      
+      // Check if this is a scheduled doubt
+      if (isScheduled && scheduledDate && scheduledTime) {
+        // Format date and time properly
+        const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+        const formattedDate = scheduledDateTime.toLocaleDateString('en-IN', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+        const formattedTime = scheduledDateTime.toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        console.log('✅ Showing scheduled popup');
+        console.log('📅 formattedDate:', formattedDate);
+        console.log('⏰ formattedTime:', formattedTime);
+        
+        // Show popup for scheduled doubts instead of redirecting
+        setScheduledDoubtInfo({
+          doubtId,
+          subject: subject.trim(),
+          scheduledDate,
+          scheduledTime,
+          formattedDate,
+          formattedTime,
+          fullDateTime: `${formattedDate} at ${formattedTime}`
+        });
+        setShowScheduledPopup(true);
+        setIsFormOpen(false);
+        clearForm();
+        setUploading(false);
+        return;
+      }
+      
+      // If it's scheduled but condition didn't match, still show popup
+      if (isScheduled && scheduledDate && scheduledTime) {
+        console.log('⚠️ Scheduled doubt but condition check failed, showing popup anyway');
+        const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
+        const formattedDate = scheduledDateTime.toLocaleDateString('en-IN', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        });
+        const formattedTime = scheduledDateTime.toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+        
+        setScheduledDoubtInfo({
+          doubtId: doubtId || 'pending',
+          subject: subject.trim(),
+          scheduledDate,
+          scheduledTime,
+          formattedDate,
+          formattedTime,
+          fullDateTime: `${formattedDate} at ${formattedTime}`
+        });
+        setShowScheduledPopup(true);
+        setIsFormOpen(false);
+        clearForm();
+        setUploading(false);
+        return;
+      }
+      
+      // Redirect to awaiting page for immediate doubts
+      if (doubtId && !isScheduled) {
         window.location.href = `/dashboard/awaiting/${doubtId}`;
         return;
       }
       
       // Fallback
+      if (!isScheduled) {
       window.location.href = `/dashboard/awaiting/temp-${Date.now()}`;
+      }
       
     } catch (error) {
-      alert(`Failed to submit doubt: ${error.message || 'Please check your input and try again.'}`);
+      console.error('Error submitting doubt:', error);
+      
+      // Check if error message contains quota/limit keywords
+      const errorMessage = error.message || error.error || 'Failed to submit doubt. Please check your input and try again.';
+      
+      if (errorMessage.toLowerCase().includes('quota') || 
+          errorMessage.toLowerCase().includes('completed') || 
+          errorMessage.toLowerCase().includes('limit')) {
+        // Show quota error popup instead of alert
+        setQuotaErrorMessage(errorMessage);
+        setQuotaDetails(error.quotaDetails || null);
+        setShowQuotaErrorPopup(true);
+      } else {
+        // For other errors, show a user-friendly message
+        alert(`Failed to submit doubt: ${errorMessage}`);
+      }
     } finally {
       setUploading(false);
     }
   };
 
-  if (!isFormOpen) {
     return (
+    <>
+      {/* Scheduled Doubt Success Popup - Always render when needed */}
+      {showScheduledPopup && scheduledDoubtInfo && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 animate-in fade-in-0 zoom-in-95 duration-300 transition-colors">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-purple-500 to-purple-600 dark:from-purple-600 dark:to-purple-700 rounded-t-xl p-6 text-white transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-12 h-12 bg-white/20 dark:bg-white/30 rounded-full flex items-center justify-center transition-colors">
+                    <Calendar className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold">Doubt Scheduled!</h3>
+                    <p className="text-purple-100 dark:text-purple-200 text-sm">Your doubt has been scheduled successfully</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowScheduledPopup(false);
+                    setScheduledDoubtInfo(null);
+                  }}
+                  className="text-white/80 dark:text-white/90 hover:text-white transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4 transition-colors">
+                  <CheckCircle className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                </div>
+                <h4 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors">
+                  Doubt Scheduled Successfully
+                </h4>
+                <p className="text-gray-600 dark:text-gray-400 transition-colors">
+                  "{scheduledDoubtInfo.subject}" has been scheduled
+                </p>
+              </div>
+
+              {/* Scheduled Details */}
+              <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 mb-6 border-2 border-purple-200 dark:border-purple-800 transition-colors">
+                <div className="flex items-center space-x-2 text-purple-700 dark:text-purple-300 mb-4 transition-colors">
+                  <Calendar className="w-5 h-5" />
+                  <span className="font-semibold text-base">Scheduled Date & Time</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-10 h-10 bg-purple-200 dark:bg-purple-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-5 h-5 text-purple-700 dark:text-purple-300" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">Date</p>
+                      <p className="text-sm font-semibold text-purple-900 dark:text-purple-100">{scheduledDoubtInfo.formattedDate}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-10 h-10 bg-purple-200 dark:bg-purple-800 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-5 h-5 text-purple-700 dark:text-purple-300" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-1">Time</p>
+                      <p className="text-sm font-semibold text-purple-900 dark:text-purple-100">{scheduledDoubtInfo.formattedTime}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-700">
+                  <p className="text-xs text-purple-600 dark:text-purple-400 text-center">
+                    <span className="font-semibold">Full Schedule:</span> {scheduledDoubtInfo.fullDateTime}
+                  </p>
+                </div>
+              </div>
+
+              {/* Info Message */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-6 transition-colors">
+                <div className="flex items-start space-x-2">
+                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-blue-800 dark:text-blue-300 transition-colors">
+                    <p className="font-semibold mb-1">What happens next?</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs">
+                      <li>Available solvers will be notified about your scheduled doubt</li>
+                      <li>A solver will accept your doubt for the scheduled time</li>
+                      <li>You'll receive an email with the meeting link at the scheduled time</li>
+                      <li>The meeting link will be active at the scheduled date and time</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <button
+                onClick={() => {
+                  setShowScheduledPopup(false);
+                  setScheduledDoubtInfo(null);
+                }}
+                className="w-full bg-purple-500 dark:bg-purple-600 hover:bg-purple-600 dark:hover:bg-purple-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+              >
+                <CheckCircle className="w-5 h-5" />
+                <span>Got it!</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Category Details Modal */}
+      {showCategoryDetails && selectedCategoryDetails && (
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-[9999]">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full mx-4 animate-in fade-in-0 zoom-in-95 duration-300 transition-colors">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 dark:from-blue-600 dark:to-blue-700 text-white p-6 rounded-t-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <Info className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">{selectedCategoryDetails.title}</h3>
+                    <p className="text-blue-100 text-sm mt-1">Duration: {selectedCategoryDetails.duration}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowCategoryDetails(false);
+                    setSelectedCategoryDetails(null);
+                  }}
+                  className="text-white/80 dark:text-white/90 hover:text-white transition-colors p-1 hover:bg-white/20 rounded"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              {/* Description */}
+              <div className="mb-6">
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {selectedCategoryDetails.description}
+                </p>
+              </div>
+
+              {/* Features */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+                  Key Features
+                </h4>
+                <ul className="space-y-2">
+                  {selectedCategoryDetails.features.map((feature, index) => (
+                    <li key={index} className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
+                      <span className="text-blue-500 dark:text-blue-400 mt-1">✓</span>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Best For */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  Best For
+                </h4>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
+                  {selectedCategoryDetails.bestFor}
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 pt-0">
+              <button
+                onClick={() => {
+                  setShowCategoryDetails(false);
+                  setSelectedCategoryDetails(null);
+                }}
+                className="w-full bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center space-x-2"
+              >
+                <CheckCircle className="w-5 h-5" />
+                <span>Got it!</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!isFormOpen ? (
       <button
         onClick={() => setIsFormOpen(true)}
         className="flex items-center border bg-blue-500 border-blue-600 hover:bg-blue-600 transition-colors text-white rounded-md h-9 px-4 py-2 cursor-pointer"
@@ -188,26 +560,154 @@ const AskDoubt = () => {
         Ask a Doubt
         <HelpCircle className="ml-2 w-5 h-5" />
       </button>
-    );
-  }
+      ) : (
+    <>
+      {/* Subject Mismatch Popup */}
+      {showSubjectMismatchPopup && (
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 transition-colors">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center transition-colors">
+                  <AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 transition-colors">
+                  Subject Mismatch Detected
+                </h3>
+                <p className="text-gray-700 dark:text-gray-300 mb-4 transition-colors">
+                  {mismatchDetails?.message || 'Please ask subject-related doubts. Your doubt description does not match the selected subject.'}
+                </p>
+                {mismatchDetails?.reason && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 mb-4 transition-colors">
+                    <div className="flex items-start space-x-2">
+                      <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-blue-800 dark:text-blue-300 transition-colors">
+                        <span className="font-medium">Reason:</span> {mismatchDetails.reason}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowSubjectMismatchPopup(false);
+                      setMismatchDetails(null);
+                    }}
+                    className="flex-1 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                  >
+                    I Understand
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSubjectMismatchPopup(false);
+                  setMismatchDetails(null);
+                }}
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white text-gray-800 border border-gray-200 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden">
+      {/* Quota Exceeded Popup */}
+      {showQuotaErrorPopup && (
+        <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in duration-200 transition-colors">
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center transition-colors">
+                  <AlertCircle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 transition-colors">
+                  Alert
+                </h3>
+                <p className="text-gray-700 dark:text-gray-300 mb-4 transition-colors leading-relaxed">
+                  {quotaErrorMessage || 'You\'ve reached your daily doubt limit. Your quota will reset after 12 AM. Please try again tomorrow!'}
+                </p>
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3 mb-4 transition-colors">
+                  <div className="flex items-start space-x-2">
+                    <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-blue-800 dark:text-blue-300 transition-colors">
+                      <p className="font-medium mb-2">📊 Your Daily Doubt Quota:</p>
+                      <ul className="space-y-1.5">
+                        <li className="flex items-center justify-between">
+                          <span>Small doubts:</span>
+                          <span className="font-semibold ml-2">2 per day</span>
+                        </li>
+                        <li className="flex items-center justify-between">
+                          <span>Medium doubts:</span>
+                          <span className="font-semibold ml-2">2 per day</span>
+                        </li>
+                        <li className="flex items-center justify-between">
+                          <span>Large doubts:</span>
+                          <span className="font-semibold ml-2">1 per day</span>
+                        </li>
+                        <li className="flex items-center justify-between pt-1 border-t border-blue-200 dark:border-blue-700 mt-1">
+                          <span className="font-medium">Total limit:</span>
+                          <span className="font-semibold ml-2">5 doubts per day</span>
+                        </li>
+                      </ul>
+                      <p className="mt-3 pt-2 border-t border-blue-200 dark:border-blue-700 text-xs">
+                        💡 Your quota will automatically reset after <strong>12:00 AM</strong>. You can continue asking doubts tomorrow!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowQuotaErrorPopup(false);
+                      setQuotaErrorMessage('');
+                      setQuotaDetails(null);
+                      setUploading(false);
+                    }}
+                    className="flex-1 bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                  >
+                    I Understand
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowQuotaErrorPopup(false);
+                  setQuotaErrorMessage('');
+                  setQuotaDetails(null);
+                  setUploading(false);
+                }}
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-400 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Form Modal */}
+      <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
+        <div className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-700 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden transition-colors duration-300">
         {/* Header */}
-        <div className="border-b border-gray-200 p-6">
+        <div className="border-b border-gray-200 dark:border-gray-700 p-6 transition-colors duration-300">
           <div className="flex justify-between items-start">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 transition-colors duration-300">
                 Ask Your Doubt
               </h2>
-              <p className="text-gray-600 mt-1">
+              <p className="text-gray-600 dark:text-gray-400 mt-1 transition-colors duration-300">
                 Fill in the details below to get help with your doubt.
               </p>
             </div>
             <button
               onClick={() => setIsFormOpen(false)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -218,42 +718,42 @@ const AskDoubt = () => {
         <form id="askDoubtForm" onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto max-h-[60vh]">
           {/* Title Field */}
           <div className="space-y-2">
-            <label htmlFor="title" className="block text-gray-700 text-sm font-medium">
-              Doubt Title <span className="text-red-500">*</span>
+            <label htmlFor="title" className="block text-gray-700 dark:text-gray-300 text-sm font-medium transition-colors duration-300">
+              Doubt Title <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <input
               type="text"
               id="title"
               value={title}
               onChange={handleTitleChange}
-              className={`w-full bg-gray-50 border ${
-                errors.title ? 'border-red-500' : 'border-gray-300'
-              } text-gray-900 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none`}
+              className={`w-full bg-gray-50 dark:bg-gray-700 border ${
+                errors.title ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'
+              } text-gray-900 dark:text-white rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-colors duration-300`}
               placeholder="Enter a clear title for your doubt (min 3 characters)"
               maxLength={200}
               required
             />
             {errors.title && (
-              <div className="flex items-center gap-1 text-red-600 text-sm">
+              <div className="flex items-center gap-1 text-red-600 dark:text-red-400 text-sm transition-colors">
                 <AlertCircle className="w-4 h-4" />
                 <span>{errors.title}</span>
               </div>
             )}
-            <p className="text-xs text-gray-500">{title.length}/200 characters</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">{title.length}/200 characters</p>
           </div>
 
           {/* Subject Select */}
           <div className="space-y-2">
-            <label htmlFor="subject" className="block text-gray-700 text-sm font-medium">
-              Subject <span className="text-red-500">*</span>
+            <label htmlFor="subject" className="block text-gray-700 dark:text-gray-300 text-sm font-medium transition-colors duration-300">
+              Subject <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <select
               id="subject"
               value={subject}
               onChange={handleSubjectChange}
-              className={`w-full bg-gray-50 border ${
-                errors.subject ? 'border-red-500' : 'border-gray-300'
-              } text-gray-900 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none`}
+              className={`w-full bg-gray-50 dark:bg-gray-700 border ${
+                errors.subject ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'
+              } text-gray-900 dark:text-white rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-colors duration-300`}
               required
             >
               <option value="">Select a subject</option>
@@ -265,7 +765,7 @@ const AskDoubt = () => {
               <option value="mern">MERN</option>
             </select>
             {errors.subject && (
-              <div className="flex items-center gap-1 text-red-600 text-sm">
+              <div className="flex items-center gap-1 text-red-600 dark:text-red-400 text-sm transition-colors">
                 <AlertCircle className="w-4 h-4" />
                 <span>{errors.subject}</span>
               </div>
@@ -274,46 +774,76 @@ const AskDoubt = () => {
 
           {/* Doubt Category */}
           <div className="space-y-2">
-            <label className="block text-gray-700 text-sm font-medium">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium transition-colors duration-300">
               Doubt Category
             </label>
             <div className="space-y-2">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="doubtCategory"
-                  value="small"
-                  checked={doubtCategory === "small"}
-                  onChange={handleCategoryChange}
-                  className="text-blue-500 focus:ring-blue-500"
-                />
-                <span className="text-gray-700">Quick 20-Minute Session</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="doubtCategory"
-                  value="medium"
-                  checked={doubtCategory === "medium"}
-                  onChange={handleCategoryChange}
-                  className="text-blue-500 focus:ring-blue-500"
-                />
-                <span className="text-gray-700">Medium Topic — Unpacking Concepts in 30 Minutes</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="doubtCategory"
-                  value="large"
-                  checked={doubtCategory === "large"}
-                  onChange={handleCategoryChange}
-                  className="text-blue-500 focus:ring-blue-500"
-                />
-                <span className="text-gray-700">Large Topic — Understand the Entire Chapter in 60 Minutes</span>
-              </label>
+              <div className="flex items-center justify-between group">
+                <label className="flex items-center space-x-2 cursor-pointer flex-1">
+                  <input
+                    type="radio"
+                    name="doubtCategory"
+                    value="small"
+                    checked={doubtCategory === "small"}
+                    onChange={handleCategoryChange}
+                    className="w-4 h-4 accent-blue-500 dark:accent-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 cursor-pointer"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300 transition-colors duration-300">Quick 20-Minute Session</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleShowCategoryDetails('small')}
+                  className="ml-2 p-1.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  title="View details"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex items-center justify-between group">
+                <label className="flex items-center space-x-2 cursor-pointer flex-1">
+                  <input
+                    type="radio"
+                    name="doubtCategory"
+                    value="medium"
+                    checked={doubtCategory === "medium"}
+                    onChange={handleCategoryChange}
+                    className="w-4 h-4 accent-blue-500 dark:accent-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 cursor-pointer"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300 transition-colors duration-300">Medium Topic — Unpacking Concepts in 30 Minutes</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleShowCategoryDetails('medium')}
+                  className="ml-2 p-1.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  title="View details"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="flex items-center justify-between group">
+                <label className="flex items-center space-x-2 cursor-pointer flex-1">
+                  <input
+                    type="radio"
+                    name="doubtCategory"
+                    value="large"
+                    checked={doubtCategory === "large"}
+                    onChange={handleCategoryChange}
+                    className="w-4 h-4 accent-blue-500 dark:accent-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 cursor-pointer"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300 transition-colors duration-300">Large Topic — Understand the Entire Chapter in 60 Minutes</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleShowCategoryDetails('large')}
+                  className="ml-2 p-1.5 text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  title="View details"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             {errors.category && (
-              <div className="flex items-center gap-1 text-red-600 text-sm">
+              <div className="flex items-center gap-1 text-red-600 dark:text-red-400 text-sm transition-colors">
                 <AlertCircle className="w-4 h-4" />
                 <span>{errors.category}</span>
               </div>
@@ -322,43 +852,88 @@ const AskDoubt = () => {
 
           {/* Doubt Description */}
           <div className="space-y-2">
-            <label htmlFor="description" className="block text-gray-700 text-sm font-medium">
-              Describe your doubt <span className="text-red-500">*</span>
+            <label htmlFor="description" className="block text-gray-700 dark:text-gray-300 text-sm font-medium transition-colors duration-300">
+              Describe your doubt <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <textarea
               id="description"
               value={doubtDescription}
               onChange={handleDescriptionChange}
               placeholder="What are you having trouble with? Be as detailed as possible (minimum 10 characters)."
-              className={`w-full min-h-[100px] bg-gray-50 border ${
-                errors.description ? 'border-red-500' : 'border-gray-300'
-              } text-gray-900 rounded-md px-3 py-2 placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-vertical`}
+              className={`w-full min-h-[100px] bg-gray-50 dark:bg-gray-700 border ${
+                errors.description ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'
+              } text-gray-900 dark:text-white rounded-md px-3 py-2 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none resize-vertical transition-colors duration-300`}
               maxLength={5000}
               required
             />
             {errors.description && (
-              <div className="flex items-center gap-1 text-red-600 text-sm">
+              <div className="flex items-center gap-1 text-red-600 dark:text-red-400 text-sm transition-colors">
                 <AlertCircle className="w-4 h-4" />
                 <span>{errors.description}</span>
               </div>
             )}
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
               {doubtDescription.length}/5000 characters (minimum 10 required)
             </p>
           </div>
 
+          {/* Schedule Date and Time - Show when schedule mode is enabled */}
+          {isScheduled && (
+            <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-2">
+                <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-sm font-semibold text-blue-900 dark:text-blue-100">Schedule Your Doubt</h3>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label htmlFor="scheduledDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    id="scheduledDate"
+                    value={scheduledDate}
+                    onChange={(e) => setScheduledDate(e.target.value)}
+                    min={new Date().toISOString().split('T')[0]}
+                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-colors duration-300"
+                    required={isScheduled}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <label htmlFor="scheduledTime" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Time <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    id="scheduledTime"
+                    value={scheduledTime}
+                    onChange={(e) => setScheduledTime(e.target.value)}
+                    className="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none transition-colors duration-300"
+                    required={isScheduled}
+                  />
+                </div>
+              </div>
+              
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
+                Your doubt will be scheduled for the selected date and time. A solver will be notified and a meeting link will be sent to you via email when accepted.
+              </p>
+            </div>
+          )}
+
           {/* Image Upload */}
           <div className="space-y-2">
-            <label className="block text-gray-700 text-sm font-medium">
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium transition-colors duration-300">
               Upload reference image (optional)
             </label>
             {errors.image && (
-              <div className="flex items-center gap-1 text-red-600 text-sm">
+              <div className="flex items-center gap-1 text-red-600 dark:text-red-400 text-sm transition-colors">
                 <AlertCircle className="w-4 h-4" />
                 <span>{errors.image}</span>
               </div>
             )}
-            <div className="border border-gray-300 bg-gray-50 rounded-md p-4">
+            <div className="border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 rounded-md p-4 transition-colors duration-300">
               <input
                 type="file"
                 id="image-upload"
@@ -378,7 +953,7 @@ const AskDoubt = () => {
                       alt="Doubt reference preview"
                       className="mx-auto max-h-[200px] w-auto object-contain rounded"
                     />
-                    <p className="text-sm text-center mt-2 text-gray-600 break-all">
+                    <p className="text-sm text-center mt-2 text-gray-600 dark:text-gray-400 break-all transition-colors duration-300">
                       {uploadedImage?.name}
                     </p>
                     <button
@@ -391,18 +966,18 @@ const AskDoubt = () => {
                         }
                         setImagePreview(null);
                       }}
-                      className="mt-2 border border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-800 bg-white rounded-md px-3 py-1 text-sm"
+                      className="mt-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 hover:text-gray-800 dark:hover:text-gray-100 bg-white dark:bg-gray-800 rounded-md px-3 py-1 text-sm transition-colors duration-300"
                     >
                       Remove Image
                     </button>
                   </div>
                 ) : (
                   <div className="py-8 flex flex-col items-center text-center">
-                    <Upload className="h-10 w-10 text-gray-400 mb-2 group-hover:text-gray-600 transition-colors" />
-                    <p className="text-sm font-medium text-gray-700">
+                    <Upload className="h-10 w-10 text-gray-400 dark:text-gray-500 mb-2 group-hover:text-gray-600 dark:group-hover:text-gray-400 transition-colors" />
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors duration-300">
                       Click to upload an image
                     </p>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 transition-colors duration-300">
                       PNG, JPG, GIF up to 2MB
                     </p>
                   </div>
@@ -413,25 +988,43 @@ const AskDoubt = () => {
         </form>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 p-6 flex justify-end space-x-2">
+        <div className="border-t border-gray-200 dark:border-gray-700 p-6 flex justify-between items-center transition-colors duration-300">
           <button
             type="button"
-            onClick={() => setIsFormOpen(false)}
-            className="border border-gray-300 text-gray-700 hover:bg-gray-50 hover:text-gray-900 bg-white rounded-md px-4 py-2 transition-colors"
+            onClick={() => setIsScheduled(!isScheduled)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors duration-300 ${
+              isScheduled
+                ? 'bg-purple-500 dark:bg-purple-600 text-white hover:bg-purple-600 dark:hover:bg-purple-700'
+                : 'border border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20'
+            }`}
           >
-            Cancel
+            <Calendar className="w-4 h-4" />
+            {isScheduled ? 'Cancel Schedule' : 'Schedule for Later'}
           </button>
-          <button
-            type="submit"
-            form="askDoubtForm"
-            disabled={uploading}
-            className="bg-blue-500 border border-blue-600 hover:bg-blue-600 hover:border-blue-700 text-white rounded-md px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {uploading ? "Submitting..." : "Submit Doubt"}
-          </button>
+          
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(false)}
+              className="border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 bg-white dark:bg-gray-800 rounded-md px-4 py-2 transition-colors duration-300"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="askDoubtForm"
+              disabled={uploading || (isScheduled && (!scheduledDate || !scheduledTime))}
+              className="bg-blue-500 dark:bg-blue-600 border border-blue-600 dark:border-blue-700 hover:bg-blue-600 dark:hover:bg-blue-700 hover:border-blue-700 dark:hover:border-blue-800 text-white rounded-md px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+            >
+              {uploading ? "Submitting..." : isScheduled ? "Schedule Doubt" : "Submit Doubt"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
+        </>
+      )}
+    </>
   );
 };
 

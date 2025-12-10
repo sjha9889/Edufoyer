@@ -63,11 +63,24 @@ class DoubtService {
 
       if (!response.ok) {
         console.error('❌ API Error:', data);
-        throw new Error(data.message || 'Failed to create doubt');
+        // Return error response with all details instead of throwing
+        // This allows the component to handle quota errors properly
+        return {
+          success: false,
+          error: data.error || data.message || 'Failed to create doubt',
+          message: data.message || data.error,
+          quotaDetails: data.quotaDetails || null,
+          fieldErrors: data.fieldErrors || null,
+          validationDetails: data.validationDetails || null
+        };
       }
 
       console.log('✅ Doubt created successfully, returning:', data.data);
-      return data.data;
+      // Ensure data.data has success flag
+      return {
+        ...data.data,
+        success: data.data.success !== false // Default to true if not explicitly false
+      };
     } catch (error) {
       console.error('❌ Create doubt error:', error);
       if (error.name === 'AbortError') {
@@ -247,6 +260,27 @@ class DoubtService {
       return data;
     } catch (error) {
       console.error('Submit feedback error:', error);
+      throw error;
+    }
+  }
+
+  // Submit solver rating for asker
+  async submitSolverRating(doubtId, { rating, comment }) {
+    try {
+      const response = await this.makeAuthenticatedRequest(`${API_BASE_URL}/solver-rating`, {
+        method: 'POST',
+        body: JSON.stringify({ doubtId, rating, comment })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to submit rating');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Submit solver rating error:', error);
       throw error;
     }
   }

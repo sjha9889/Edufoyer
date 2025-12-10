@@ -21,14 +21,22 @@ const LiveKitMeeting = () => {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showSolverRatingModal, setShowSolverRatingModal] = useState(false);
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
+  const [solverRating, setSolverRating] = useState(5);
+  const [solverComment, setSolverComment] = useState('');
   const [completing, setCompleting] = useState(false);
+  const [submittingSolverRating, setSubmittingSolverRating] = useState(false);
   const [isDoubter, setIsDoubter] = useState(false);
   const [hasSubmittedRating, setHasSubmittedRating] = useState(false);
+  const [hasSubmittedSolverRating, setHasSubmittedSolverRating] = useState(false);
   const [remainingSecs, setRemainingSecs] = useState(null);
   const [profanityWarning, setProfanityWarning] = useState(null);
   const [recordingWarning, setRecordingWarning] = useState(null);
+  const [isScheduledDoubt, setIsScheduledDoubt] = useState(false);
+  const [scheduledDateTime, setScheduledDateTime] = useState(null);
+  const [isScheduledTime, setIsScheduledTime] = useState(true);
   const chatInputRef = useRef(null);
   const recordingDetectionRef = useRef(null);
 
@@ -80,6 +88,17 @@ const LiveKitMeeting = () => {
         const currentUserId = user?.id || user?._id;
         const doubterId = doubt?.doubter_id || doubt?.doubter?._id;
         setIsDoubter(String(currentUserId) === String(doubterId));
+
+        // Check if doubt is scheduled
+        if (doubt?.is_scheduled && doubt?.scheduled_date) {
+          setIsScheduledDoubt(true);
+          const scheduledDate = new Date(doubt.scheduled_date);
+          setScheduledDateTime(scheduledDate);
+          
+          // Check if current time is before scheduled time
+          const now = new Date();
+          setIsScheduledTime(now >= scheduledDate);
+        }
 
         // Setup session timer based on category
         const category = doubt?.category || 'medium';
@@ -276,7 +295,8 @@ const LiveKitMeeting = () => {
     const checkInterval = setInterval(() => {
       if (detection.isRecording && detection.methods.length > 0) {
         // Only warn for external recording methods, not screen share or tab switch
-        const allowedMethods = ['Screen Sharing', 'Tab Switch'];
+        // getDisplayMedia is allowed for legitimate screen sharing
+        const allowedMethods = ['Screen Sharing', 'Tab Switch', 'getDisplayMedia'];
         const filteredMethods = detection.methods.filter(m => !allowedMethods.includes(m));
         
         if (filteredMethods.length > 0) {
@@ -332,7 +352,14 @@ const LiveKitMeeting = () => {
           setShowCompletionModal(true);
           return false;
         }
-        // Solver or asker after rating → redirect
+        if (!isDoubter && !hasSubmittedSolverRating) {
+          // Block solver from leaving until rating asker
+          e.stopPropagation();
+          e.preventDefault();
+          setShowSolverRatingModal(true);
+          return false;
+        }
+        // Both have rated → redirect
         setTimeout(() => navigate('/dashboard'), 0);
       } catch {}
     };
@@ -358,7 +385,30 @@ const LiveKitMeeting = () => {
       const btn = document.querySelector('[data-lk-leave], button[title="Leave"], [aria-label="Leave"]');
       if (btn) btn.removeEventListener('click', onLeaveClick, true);
     };
-  }, [isDoubter, hasSubmittedRating, navigate]);
+  }, [isDoubter, hasSubmittedRating, hasSubmittedSolverRating, navigate]);
+
+  // Listen for custom events from script
+  useEffect(() => {
+    const handleRatePrompt = () => {
+      if (isDoubter && !hasSubmittedRating) {
+        setShowCompletionModal(true);
+      }
+    };
+    
+    const handleSolverRatePrompt = () => {
+      if (!isDoubter && !hasSubmittedSolverRating) {
+        setShowSolverRatingModal(true);
+      }
+    };
+
+    window.addEventListener('EF_RATE_PROMPT', handleRatePrompt);
+    window.addEventListener('EF_SOLVER_RATE_PROMPT', handleSolverRatePrompt);
+
+    return () => {
+      window.removeEventListener('EF_RATE_PROMPT', handleRatePrompt);
+      window.removeEventListener('EF_SOLVER_RATE_PROMPT', handleSolverRatePrompt);
+    };
+  }, [isDoubter, hasSubmittedRating, hasSubmittedSolverRating]);
 
   const handleCompleteDoubt = async () => {
     try {
@@ -375,6 +425,24 @@ const LiveKitMeeting = () => {
       alert('Failed to submit feedback. Please try again.');
     } finally {
       setCompleting(false);
+    }
+  };
+
+  const handleSolverRating = async () => {
+    try {
+      setSubmittingSolverRating(true);
+      // Solver submits rating for asker
+      await doubtService.submitSolverRating(doubtId, { rating: solverRating, comment: solverComment });
+      setHasSubmittedSolverRating(true);
+      
+      // Show success message and redirect to main dashboard
+      alert('Rating submitted successfully!');
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error submitting solver rating:', error);
+      alert('Failed to submit rating. Please try again.');
+    } finally {
+      setSubmittingSolverRating(false);
     }
   };
 
@@ -407,6 +475,41 @@ const LiveKitMeeting = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
         <div>Waiting for token…</div>
+      </div>
+    );
+  }
+
+  // Show scheduled time message if it's not time yet
+  if (isScheduledDoubt && !isScheduledTime && scheduledDateTime) {
+    const formattedDate = scheduledDateTime.toLocaleDateString('en-IN', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+    const formattedTime = scheduledDateTime.toLocaleTimeString('en-IN', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white p-6">
+        <div className="text-center max-w-md">
+          <div className="w-20 h-20 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Clock className="w-10 h-10" />
+          </div>
+          <h2 className="text-2xl font-bold mb-4">Session Scheduled</h2>
+          <p className="text-gray-300 mb-6">
+            This session is scheduled for:
+          </p>
+          <div className="bg-purple-800 rounded-lg p-4 mb-6">
+            <p className="text-lg font-semibold">{formattedDate}</p>
+            <p className="text-xl font-bold mt-2">{formattedTime}</p>
+          </div>
+          <p className="text-gray-400 text-sm">
+            The meeting link will be active at the scheduled time. You'll receive an email notification when it's time to join.
+          </p>
+        </div>
       </div>
     );
   }
@@ -468,7 +571,9 @@ const LiveKitMeeting = () => {
       {/* Visual Watermark Overlay - Anti-Recording */}
       <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
         <div 
-          className="absolute top-4 left-4 text-white/30 text-xs font-mono select-none"
+          className={`absolute left-4 text-white/30 text-xs font-mono select-none ${
+            remainingSecs != null && remainingSecs > 0 ? 'top-16' : 'top-4'
+          }`}
           style={{
             userSelect: 'none',
             WebkitUserSelect: 'none',
@@ -502,21 +607,21 @@ const LiveKitMeeting = () => {
 
       {/* Session timer top-left */}
       {remainingSecs != null && remainingSecs > 0 && (
-        <div className="absolute top-4 left-4 z-50 bg-black/70 text-white px-3 py-1 rounded flex items-center gap-2">
-          <Clock className="w-4 h-4" />
-          <span>{Math.floor(remainingSecs/60)}:{String(remainingSecs%60).padStart(2,'0')}</span>
+        <div className="absolute top-4 left-4 z-50 bg-black/70 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-lg">
+          <Clock className="w-4 h-4 flex-shrink-0" />
+          <span className="font-mono font-semibold">{Math.floor(remainingSecs/60)}:{String(remainingSecs%60).padStart(2,'0')}</span>
         </div>
       )}
       
-      {/* Rating button visible only to asker */}
-      {isDoubter && (
+      {/* Rating button visible only to solver */}
+      {!isDoubter && !hasSubmittedSolverRating && (
         <div className="absolute top-4 right-4 z-50">
           <button
-            onClick={() => setShowCompletionModal(true)}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg"
+            onClick={() => setShowSolverRatingModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 shadow-lg"
           >
             <CheckCircle className="w-4 h-4" />
-            Rate & Complete
+            Rate Asker & Leave
           </button>
         </div>
       )}
@@ -532,10 +637,17 @@ const LiveKitMeeting = () => {
               try {
                 const isDoubter = ${JSON.stringify(true)} && ${isDoubter ? 'true' : 'false'};
                 const hasRated = ${hasSubmittedRating ? 'true' : 'false'};
+                const hasSolverRated = ${hasSubmittedSolverRating ? 'true' : 'false'};
                 if (isDoubter && !hasRated) {
                   e.stopPropagation();
                   e.preventDefault();
                   const evt = new CustomEvent('EF_RATE_PROMPT');
+                  window.dispatchEvent(evt);
+                  return false;
+                } else if (!isDoubter && !hasSolverRated) {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  const evt = new CustomEvent('EF_SOLVER_RATE_PROMPT');
                   window.dispatchEvent(evt);
                   return false;
                 } else {
@@ -550,7 +662,7 @@ const LiveKitMeeting = () => {
         })();
       ` }} />
 
-      {/* Completion Modal */}
+      {/* Completion Modal for Asker */}
       {isDoubter && showCompletionModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
@@ -600,6 +712,62 @@ const LiveKitMeeting = () => {
                 className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
               >
                 {completing ? 'Submitting...' : 'Submit Rating'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Solver Rating Modal */}
+      {!isDoubter && showSolverRatingModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-semibold mb-4">Rate the Asker</h3>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Rate the asker (1-5)
+              </label>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => setSolverRating(star)}
+                    className={`p-1 ${solverRating >= star ? 'text-yellow-400' : 'text-gray-300'}`}
+                  >
+                    <Star className="w-6 h-6 fill-current" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Comments (optional)
+              </label>
+              <textarea
+                value={solverComment}
+                onChange={(e) => setSolverComment(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                rows={3}
+                placeholder="Any feedback about the asker..."
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowSolverRatingModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 text-gray-700"
+                disabled={submittingSolverRating}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSolverRating}
+                disabled={submittingSolverRating}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {submittingSolverRating ? 'Submitting...' : 'Submit Rating'}
               </button>
             </div>
           </div>

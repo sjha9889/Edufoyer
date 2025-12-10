@@ -238,6 +238,148 @@ class AuthService {
     }
   }
 
+  // Forgot password - request password reset
+  async forgotPassword(email) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      let data;
+      const contentType = response.headers.get('content-type');
+      
+      // Check if response has content and is JSON
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const text = await response.text();
+          data = text ? JSON.parse(text) : {};
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          throw new Error('Invalid server response. Please try again.');
+        }
+      } else {
+        // If not JSON, try to get text response
+        const text = await response.text();
+        throw new Error(text || `Server error (${response.status}). Please try again.`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send password reset email');
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Password reset email sent successfully'
+      };
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      // If it's already an Error object with message, throw it as is
+      if (error instanceof Error) {
+        throw error;
+      }
+      // Otherwise wrap it
+      throw new Error(error.message || 'Failed to send password reset email. Please try again.');
+    }
+  }
+
+  // Verify OTP for password reset
+  async verifyResetOTP(email, otp) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/verify-reset-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp }),
+      });
+
+      let data;
+      const contentType = response.headers.get('content-type');
+      
+      // Check if response has content and is JSON
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const text = await response.text();
+          data = text ? JSON.parse(text) : {};
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          throw new Error('Invalid server response. Please try again.');
+        }
+      } else {
+        // If not JSON, try to get text response
+        const text = await response.text();
+        throw new Error(text || `Server error (${response.status}). Please try again.`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to verify OTP');
+      }
+
+      return {
+        success: true,
+        message: data.message || 'OTP verified successfully'
+      };
+    } catch (error) {
+      console.error('Verify reset OTP error:', error);
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error(error.message || 'Failed to verify OTP. Please try again.');
+    }
+  }
+
+  // Reset password with OTP
+  async resetPassword(email, otp, password) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/reset-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, otp, password }),
+      });
+
+      let data;
+      const contentType = response.headers.get('content-type');
+      
+      // Check if response has content and is JSON
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          const text = await response.text();
+          data = text ? JSON.parse(text) : {};
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          throw new Error('Invalid server response. Please try again.');
+        }
+      } else {
+        // If not JSON, try to get text response
+        const text = await response.text();
+        throw new Error(text || `Server error (${response.status}). Please try again.`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to reset password');
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Password reset successfully'
+      };
+    } catch (error) {
+      console.error('Reset password error:', error);
+      // If it's already an Error object with message, throw it as is
+      if (error instanceof Error) {
+        throw error;
+      }
+      // Otherwise wrap it
+      throw new Error(error.message || 'Failed to reset password. Please try again.');
+    }
+  }
+
   // Admin onboard solver
   async onboardSolver(solverData) {
     try {

@@ -9,7 +9,11 @@
     "dev": "nodemon server.js",
     "monitor": "node server-monitor.js",
     "stable": "node server-monitor.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "stress-test": "node stress-test.js",
+    "stress-test:light": "CONCURRENT_USERS=10 TEST_DURATION=30 node stress-test.js",
+    "stress-test:medium": "CONCURRENT_USERS=50 TEST_DURATION=60 node stress-test.js",
+    "stress-test:heavy": "CONCURRENT_USERS=100 TEST_DURATION=120 node stress-test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -24,6 +28,8 @@
     "mongoose": "^7.5.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.10.1",
+    "openai": "^6.9.0",
+    "razorpay": "^2.9.6",
     "socket.io": "^4.7.2",
     "zod": "^3.22.2"
   },

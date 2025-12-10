@@ -59,13 +59,16 @@ const OnlineReferralSystem = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Coming Soon Badge */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-3 bg-gradient-to-r from-purple-100 to-pink-100 border-4 border-purple-500 px-8 py-4 rounded-2xl shadow-2xl">
+            <Clock className="w-8 h-8 text-purple-600 animate-pulse" />
+            <span className="text-3xl font-bold text-purple-800">Coming Soon</span>
+          </div>
+        </div>
+
         {/* Hero Section */}
         <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 bg-purple-100 text-purple-800 px-4 py-2 rounded-full text-sm font-medium mb-6">
-            <Clock className="w-4 h-4" />
-            Coming Soon
-          </div>
-          
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
             Revolutionize Your
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">

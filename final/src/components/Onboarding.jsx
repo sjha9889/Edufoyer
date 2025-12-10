@@ -50,7 +50,7 @@ const Onboarding = () => {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[#171717] text-gray-200">
+    <div className="relative min-h-screen w-full bg-[#171717] dark:bg-gray-900 text-gray-200 dark:text-gray-100 transition-colors duration-300">
       {/* Vertical Dotted Lines */}
       <div className="absolute top-0 bottom-0 left-[calc(50%-220px)] border-t-3 border-l-3 border-dotted border-[#2b2b2b]" />
       <div className="absolute top-0 bottom-0 right-[calc(50%-220px)] border-t-3 border-l-3 border-dotted border-[#2b2b2b]" />

@@ -41,8 +41,8 @@ const SolvedDoubtsList = () => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`w-4 h-4 ${
-          i < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
+        className={`w-4 h-4 transition-colors duration-300 ${
+          i < rating ? 'text-yellow-400 dark:text-yellow-500 fill-current' : 'text-gray-300 dark:text-gray-600'
         }`}
       />
     ));
@@ -51,18 +51,18 @@ const SolvedDoubtsList = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <p className="text-red-600">Error: {error}</p>
+      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 transition-colors duration-300">
+        <p className="text-red-600 dark:text-red-400">Error: {error}</p>
         <button
           onClick={fetchSolvedDoubts}
-          className="mt-2 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          className="mt-2 px-4 py-2 bg-red-600 dark:bg-red-500 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-600 transition-colors"
         >
           Try Again
         </button>
@@ -73,9 +73,9 @@ const SolvedDoubtsList = () => {
   if (solvedDoubts.length === 0) {
     return (
       <div className="text-center py-8">
-        <CheckCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-600 mb-2">No Solved Doubts Yet</h3>
-        <p className="text-gray-500">Start solving doubts to see them here!</p>
+        <CheckCircle className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+        <h3 className="text-lg font-medium text-gray-600 dark:text-gray-400 mb-2">No Solved Doubts Yet</h3>
+        <p className="text-gray-500 dark:text-gray-400">Start solving doubts to see them here!</p>
       </div>
     );
   }
@@ -83,8 +83,8 @@ const SolvedDoubtsList = () => {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Solved Doubts</h2>
-        <div className="flex items-center gap-2 text-sm text-gray-600">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 transition-colors duration-300">Solved Doubts</h2>
+        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">
           <CheckCircle className="w-4 h-4" />
           <span>{pagination?.totalCount || 0} doubts solved</span>
         </div>
@@ -98,18 +98,18 @@ const SolvedDoubtsList = () => {
           return (
             <div
               key={solverDoubt._id}
-              className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow"
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-300"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2 transition-colors duration-300">
                     {doubt?.subject}
                   </h3>
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2 transition-colors duration-300">
                     {doubt?.description}
                   </p>
                   
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
+                  <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
                     <div className="flex items-center gap-1">
                       <User className="w-4 h-4" />
                       <span>{doubter?.name || 'Unknown Student'}</span>
@@ -125,34 +125,34 @@ const SolvedDoubtsList = () => {
                   <div className="flex items-center gap-1">
                     {renderStars(solverDoubt.feedback_rating || 0)}
                   </div>
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">
                     {solverDoubt.feedback_rating || 0}/5
                   </span>
                 </div>
               </div>
 
               {solverDoubt.feedback_comment && (
-                <div className="bg-gray-50 rounded-lg p-3">
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 transition-colors duration-300">
                   <div className="flex items-start gap-2">
-                    <MessageSquare className="w-4 h-4 text-gray-500 mt-0.5" />
+                    <MessageSquare className="w-4 h-4 text-gray-500 dark:text-gray-400 mt-0.5" />
                     <div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">Feedback:</p>
-                      <p className="text-sm text-gray-600">{solverDoubt.feedback_comment}</p>
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 transition-colors duration-300">Feedback:</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors duration-300">{solverDoubt.feedback_comment}</p>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="mt-4 pt-4 border-t border-gray-100">
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 transition-colors duration-300">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 transition-colors duration-300">
                       <CheckCircle className="w-3 h-3 mr-1" />
                       Completed
                     </span>
                   </div>
                   
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400 transition-colors duration-300">
                     Session completed on {formatDate(solverDoubt.resolved_at)}
                   </div>
                 </div>
@@ -168,19 +168,19 @@ const SolvedDoubtsList = () => {
           <button
             onClick={() => setCurrentPage(currentPage - 1)}
             disabled={!pagination.hasPrevPage}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
           >
             Previous
           </button>
           
-          <span className="px-3 py-2 text-sm text-gray-700">
+          <span className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 transition-colors duration-300">
             Page {pagination.currentPage} of {pagination.totalPages}
           </span>
           
           <button
             onClick={() => setCurrentPage(currentPage + 1)}
             disabled={!pagination.hasNextPage}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
           >
             Next
           </button>

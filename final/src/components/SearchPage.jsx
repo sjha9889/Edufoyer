@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { debounce } from '../utils/debounce';
 import { 
   Search, 
   Filter, 
@@ -66,16 +67,57 @@ const SearchPage = () => {
     loadRecentSearches();
   }, []);
 
-  useEffect(() => {
-    if (searchTerm.trim()) {
-      const timeoutId = setTimeout(() => {
-        performSearch();
-      }, 500);
-      return () => clearTimeout(timeoutId);
-    } else {
+  // Memoize performSearch to prevent unnecessary recreations
+  const performSearchMemo = useCallback(async () => {
+    if (!searchTerm.trim()) {
       setSearchResults({ users: [], posts: [], groups: [], hashtags: [] });
+      return;
     }
-  }, [searchTerm, filters]);
+    
+    try {
+      setIsLoading(true);
+      
+      const [usersResults, postsResults] = await Promise.all([
+        socialService.searchUsers(searchTerm, 1, 10),
+        socialService.searchPosts(searchTerm, 1, 10)
+      ]);
+
+      setSearchResults({
+        users: usersResults.users || [],
+        posts: postsResults.posts || [],
+        groups: [],
+        hashtags: []
+      });
+
+      // Save to recent searches
+      if (searchTerm.trim()) {
+        const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
+        const newRecent = [searchTerm, ...recent.filter(s => s !== searchTerm)].slice(0, 10);
+        localStorage.setItem('recentSearches', JSON.stringify(newRecent));
+        setRecentSearches(newRecent);
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error performing search:', error);
+      }
+      setSearchResults({ users: [], posts: [], groups: [], hashtags: [] });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchTerm]);
+
+  // Debounce search to avoid excessive API calls
+  const debouncedSearch = useMemo(
+    () => debounce(performSearchMemo, 500),
+    [performSearchMemo]
+  );
+
+  useEffect(() => {
+    debouncedSearch();
+    return () => {
+      // Cleanup on unmount
+    };
+  }, [debouncedSearch]);
 
   const loadTrendingTopics = async () => {
     try {
@@ -103,101 +145,6 @@ const SearchPage = () => {
     }
   };
 
-  const performSearch = async () => {
-    try {
-      setIsLoading(true);
-      
-      // This would be API calls to search different content types
-      const [usersResults, postsResults] = await Promise.all([
-        socialService.searchUsers(searchTerm, 1, 10),
-        socialService.searchPosts(searchTerm, 1, 10)
-      ]);
-
-      setSearchResults({
-        users: usersResults.users || [],
-        posts: postsResults.posts || [],
-        groups: [], // This would be implemented
-        hashtags: [] // This would be implemented
-      });
-
-      // Save to recent searches
-      if (searchTerm.trim()) {
-        const recent = JSON.parse(localStorage.getItem('recentSearches') || '[]');
-        const newRecent = [searchTerm, ...recent.filter(s => s !== searchTerm)].slice(0, 10);
-        localStorage.setItem('recentSearches', JSON.stringify(newRecent));
-        setRecentSearches(newRecent);
-      }
-    } catch (error) {
-      console.error('Error performing search:', error);
-      // Fallback to sample data
-      const sampleResults = {
-        users: [
-          {
-            _id: 1,
-            name: 'Rahul Sharma',
-            email: 'rahul@example.com',
-            avatar: 'https://via.placeholder.com/40',
-            subjects: ['Computer Science', 'Mathematics'],
-            isFriend: false,
-            mutualFriends: 5
-          },
-          {
-            _id: 2,
-            name: 'Priya Singh',
-            email: 'priya@example.com',
-            avatar: 'https://via.placeholder.com/40',
-            subjects: ['Mathematics', 'Physics'],
-            isFriend: true,
-            mutualFriends: 3
-          }
-        ],
-        posts: [
-          {
-            _id: 1,
-            content: 'Just solved this complex calculus problem! The key was understanding the chain rule.',
-            author: { name: 'Amit Kumar', avatar: 'https://via.placeholder.com/40' },
-            subject: 'Mathematics',
-            likes: 12,
-            comments: 5,
-            shares: 2,
-            createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-            hashtags: ['#calculus', '#mathematics']
-          },
-          {
-            _id: 2,
-            content: 'Sharing my study notes on data structures. Hope this helps someone!',
-            author: { name: 'Sneha Patel', avatar: 'https://via.placeholder.com/40' },
-            subject: 'Computer Science',
-            likes: 8,
-            comments: 3,
-            shares: 1,
-            createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
-            hashtags: ['#datastructures', '#programming']
-          }
-        ],
-        groups: [
-          {
-            _id: 1,
-            name: 'Advanced Mathematics Study Group',
-            description: 'Deep dive into advanced mathematics concepts',
-            subject: 'Mathematics',
-            memberCount: 15,
-            maxMembers: 20,
-            isPrivate: false,
-            creator: { name: 'Dr. Sarah Wilson', avatar: 'https://via.placeholder.com/40' }
-          }
-        ],
-        hashtags: [
-          { tag: 'machinelearning', count: 1250 },
-          { tag: 'calculus', count: 980 },
-          { tag: 'datastructures', count: 850 }
-        ]
-      };
-      setSearchResults(sampleResults);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleAddFriend = async (userId) => {
     try {
@@ -229,17 +176,12 @@ const SearchPage = () => {
     return `${Math.floor(diffInSeconds / 86400)}d ago`;
   };
 
-  const getFilteredResults = () => {
-    let results = { ...searchResults };
-
+  const filteredResults = useMemo(() => {
     if (activeTab !== 'all') {
-      return { [activeTab]: results[activeTab] || [] };
+      return { [activeTab]: searchResults[activeTab] || [] };
     }
-
-    return results;
-  };
-
-  const filteredResults = getFilteredResults();
+    return searchResults;
+  }, [activeTab, searchResults]);
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">

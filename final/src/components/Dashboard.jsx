@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Home, Users, BookOpen, MessageCircle, Settings, Search, LogOut, Bell, Video, Share2, Building2, UserPlus, Calendar } from 'lucide-react';
+import { Home, Users, BookOpen, MessageCircle, Settings, Search, LogOut, Bell, Video, Share2, Building2, UserPlus, Calendar, CheckCircle, User, Clock, X, Menu } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import authService from '../services/authService';
 import { io } from 'socket.io-client';
 import AskDoubt from './AskDoubt';
-import DoubtSidebar from './DoubtSidebar';
 import SolverRegistration from './SolverRegistration';
+import SolverRequestForm from './SolverRequestForm';
 import WalletDisplay from './WalletDisplay';
+import DarkModeToggle from './DarkModeToggle';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('Overall');
@@ -23,6 +24,22 @@ const Dashboard = () => {
   const [toast, setToast] = useState(null);
   const seenAvailableIdsRef = useRef(new Set());
   const navigate = useNavigate();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [showSolverRequestForm, setShowSolverRequestForm] = useState(false);
+  
+  // Handle responsive sidebar - close on mobile by default, open on desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        // Desktop - ensure sidebar is open
+        setIsSidebarOpen(true);
+      }
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -91,7 +108,16 @@ const Dashboard = () => {
       })();
 
       socket.on('doubt:available', (payload) => {
-        setIncomingDoubt(payload);
+        setIncomingDoubt({
+          doubtId: payload.doubtId,
+          subject: payload.subject,
+          description: payload.description,
+          status: payload.status,
+          createdAt: payload.createdAt,
+          is_scheduled: payload.is_scheduled || false,
+          scheduled_date: payload.scheduled_date,
+          scheduled_time: payload.scheduled_time,
+        });
         setShowAvailableModal(true);
       });
 
@@ -150,6 +176,9 @@ const Dashboard = () => {
                 description: fresh.description,
                 status: fresh.status,
                 createdAt: fresh.createdAt,
+                is_scheduled: fresh.is_scheduled || false,
+                scheduled_date: fresh.scheduled_date,
+                scheduled_time: fresh.scheduled_time,
               });
               setShowAvailableModal(true);
             }
@@ -188,7 +217,7 @@ const Dashboard = () => {
     try {
       setIsJoiningSession(true);
       const token = localStorage.getItem('token');
-      await fetch('/api/solver/accept-doubt', {
+      const response = await fetch('/api/solver/accept-doubt', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -196,7 +225,24 @@ const Dashboard = () => {
         },
         body: JSON.stringify({ doubtId: incomingDoubt.doubtId })
       });
+      
+      if (!response.ok) {
+        throw new Error('Failed to accept doubt');
+      }
+      
       await new Promise((r) => setTimeout(r, 1200));
+      
+      // For scheduled doubts, only accept (don't join session)
+      if (incomingDoubt.is_scheduled && incomingDoubt.scheduled_date) {
+        setShowAvailableModal(false);
+        setIncomingDoubt(null);
+        setIsJoiningSession(false);
+        // Show success message
+        alert('Doubt accepted successfully! You will receive an email with the meeting link at the scheduled time.');
+        return;
+      }
+      
+      // For immediate doubts, accept and join session
       const toId = incomingDoubt.doubtId;
       setShowAvailableModal(false);
       setIncomingDoubt(null);
@@ -216,12 +262,13 @@ const Dashboard = () => {
     }
   };
 
+
   if (isLoading) {
     return (
-      <div className="flex h-screen bg-gray-50 items-center justify-center">
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900 items-center justify-center transition-colors duration-300">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 dark:border-blue-400 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     );
@@ -263,12 +310,14 @@ const Dashboard = () => {
     const baseItems = [
       { icon: Home, label: 'Home', active: true, path: '/dashboard' },
       { icon: BookOpen, label: 'My Doubts', path: '/dashboard/doubts' },
+      { icon: Search, label: 'Available Doubts', path: '/dashboard/doubts?tab=available' },
       { icon: BookOpen, label: 'Solved Doubts', path: '/dashboard/solved-doubts' },
       { icon: Share2, label: 'Educational Social', path: `/dashboard/social/${userId}` },
       { icon: Building2, label: 'Corporate Connect', path: '/dashboard/corporate-connect' },
       { icon: UserPlus, label: 'Online Referral System', path: '/dashboard/referral-system' },
       { icon: Calendar, label: 'Previous Year Live', path: '/dashboard/pyq' },
       { icon: Bell, label: 'Notifications', path: '/dashboard/notifications' },
+      { icon: User, label: 'Profile', path: '/dashboard/profile' },
       { icon: LogOut, label: 'Logout', onClick: handleLogout }
     ];
 
@@ -281,9 +330,133 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <>
+      <style>{`
+        @keyframes wave {
+          0%, 100% {
+            transform: perspective(1000px) rotateY(-15deg) rotateZ(0deg) translateY(0px);
+          }
+          25% {
+            transform: perspective(1000px) rotateY(-10deg) rotateZ(20deg) translateY(-2px);
+          }
+          50% {
+            transform: perspective(1000px) rotateY(-15deg) rotateZ(0deg) translateY(0px);
+          }
+          75% {
+            transform: perspective(1000px) rotateY(-20deg) rotateZ(-20deg) translateY(-2px);
+          }
+        }
+        .welcome-3d {
+          display: inline-block;
+          position: relative;
+          transform: perspective(800px) rotateX(3deg) rotateY(-5deg);
+          transform-style: preserve-3d;
+          font-weight: 900;
+          letter-spacing: 0px;
+          color: #ffffff;
+          padding: 2px 4px;
+          margin: 0;
+          line-height: 1.2;
+          cursor: pointer;
+          transition: transform 0.2s ease-out;
+          background: linear-gradient(
+            135deg,
+            rgba(255,255,255,0.15) 0%,
+            rgba(255,255,255,0.05) 50%,
+            rgba(0,0,0,0.1) 100%
+          );
+          border: 1.5px solid rgba(255,255,255,0.2);
+          border-top: 1.5px solid rgba(255,255,255,0.3);
+          border-left: 1.5px solid rgba(255,255,255,0.3);
+          border-bottom: 1.5px solid rgba(0,0,0,0.3);
+          border-right: 1.5px solid rgba(0,0,0,0.3);
+          box-shadow: 
+            /* Multiple shadow layers for brick depth */
+            inset 0px 1px 0px rgba(255,255,255,0.2),
+            inset 1px 0px 0px rgba(255,255,255,0.15),
+            inset 0px -1px 0px rgba(0,0,0,0.2),
+            inset -1px 0px 0px rgba(0,0,0,0.2),
+            /* Outer shadows for 3D effect */
+            2px 2px 0px rgba(0,0,0,0.3),
+            4px 4px 0px rgba(0,0,0,0.25),
+            6px 6px 0px rgba(0,0,0,0.2),
+            8px 8px 0px rgba(0,0,0,0.15),
+            10px 10px 0px rgba(0,0,0,0.1),
+            12px 12px 0px rgba(0,0,0,0.05),
+            /* Glow */
+            0px 0px 15px rgba(255,255,255,0.2);
+          text-shadow: 
+            /* Text depth */
+            1px 1px 2px rgba(0,0,0,0.5),
+            2px 2px 4px rgba(0,0,0,0.4),
+            /* Highlight */
+            -1px -1px 1px rgba(255,255,255,0.3);
+          filter: drop-shadow(8px 8px 16px rgba(0,0,0,0.5));
+        }
+        .welcome-3d:hover {
+          transform: perspective(800px) rotateX(8deg) rotateY(-8deg) translateY(-8px) scale(1.1);
+          z-index: 10;
+          filter: drop-shadow(12px 12px 24px rgba(0,0,0,0.6));
+          box-shadow: 
+            inset 0px 1px 0px rgba(255,255,255,0.3),
+            inset 1px 0px 0px rgba(255,255,255,0.25),
+            inset 0px -1px 0px rgba(0,0,0,0.3),
+            inset -1px 0px 0px rgba(0,0,0,0.3),
+            2px 2px 0px rgba(0,0,0,0.3),
+            4px 4px 0px rgba(0,0,0,0.25),
+            6px 6px 0px rgba(0,0,0,0.2),
+            8px 8px 0px rgba(0,0,0,0.15),
+            10px 10px 0px rgba(0,0,0,0.1),
+            12px 12px 0px rgba(0,0,0,0.05),
+            0px 0px 20px rgba(255,255,255,0.3);
+        }
+        .welcome-3d::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: 
+            repeating-linear-gradient(
+              0deg,
+              transparent,
+              transparent 2px,
+              rgba(0,0,0,0.05) 2px,
+              rgba(0,0,0,0.05) 4px
+            ),
+            repeating-linear-gradient(
+              90deg,
+              transparent,
+              transparent 20px,
+              rgba(255,255,255,0.03) 20px,
+              rgba(255,255,255,0.03) 22px
+            );
+          pointer-events: none;
+          border-radius: 2px;
+        }
+        .welcome-3d::after {
+          content: '';
+          position: absolute;
+          top: -2px;
+          left: -2px;
+          right: -2px;
+          bottom: -2px;
+          background: linear-gradient(
+            135deg,
+            rgba(255,255,255,0.1) 0%,
+            transparent 30%,
+            transparent 70%,
+            rgba(0,0,0,0.15) 100%
+          );
+          pointer-events: none;
+          z-index: -1;
+          border-radius: 4px;
+        }
+      `}</style>
+      <div className="flex h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
       {toast && (
-        <div className="fixed top-4 right-4 z-50 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg">
+        <div className="fixed top-4 right-4 z-50 bg-gray-900 dark:bg-gray-800 text-white px-4 py-3 rounded-lg shadow-lg">
           <div className="flex items-center gap-2">
             <span className="inline-block w-2 h-2 bg-green-400 rounded-full"></span>
             <span className="text-sm">{toast.message}</span>
@@ -291,74 +464,216 @@ const Dashboard = () => {
         </div>
       )}
       {showAvailableModal && incomingDoubt && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4">
-            <div className="p-6 border-b">
-              <h3 className="text-lg font-semibold text-gray-800">New Doubt Available</h3>
-              <p className="text-sm text-gray-600 mt-1">Subject: {incomingDoubt.subject}</p>
+        <div className="fixed inset-0 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 animate-in fade-in-0 zoom-in-95 duration-300 transition-colors">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-500 to-green-600 dark:from-green-600 dark:to-green-700 rounded-t-xl p-4 text-white transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-10 h-10 bg-white/20 dark:bg-white/30 rounded-full flex items-center justify-center transition-colors">
+                    <CheckCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold">New Doubt Available!</h3>
+                    <p className="text-green-100 dark:text-green-200 text-xs">A new doubt is waiting for you</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => { if (!isJoiningSession) { setShowAvailableModal(false); setIncomingDoubt(null); } }}
+                  disabled={isJoiningSession}
+                  className="text-white/80 dark:text-white/90 hover:text-white transition-colors disabled:opacity-50"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-            <div className="p-6 text-sm text-gray-700">
-              {incomingDoubt.description}
-            </div>
-            <div className="p-6 pt-0 flex gap-2">
-              <button onClick={handleAcceptFromModal} disabled={isJoiningSession} className={`flex-1 px-4 py-2 text-white rounded-lg ${isJoiningSession ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                {isJoiningSession ? 'Joining session…' : 'Accept & Join'}
-              </button>
-              <button onClick={() => { if (!isJoiningSession) { setShowAvailableModal(false); setIncomingDoubt(null); } }} disabled={isJoiningSession} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50">
-                Dismiss
-              </button>
+
+            {/* Content */}
+            <div className="p-4">
+              <div className="text-center mb-4">
+                <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-2 transition-colors">
+                  <BookOpen className="w-6 h-6 text-green-600 dark:text-green-400" />
+                </div>
+                <h4 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-1 transition-colors">
+                  New Doubt Available
+                </h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 transition-colors">
+                  "{incomingDoubt.subject}" needs your expertise
+                </p>
+              </div>
+
+              {/* Doubt Details */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 mb-4 transition-colors">
+                <div className="flex items-center space-x-2 text-gray-700 dark:text-gray-300 mb-2 transition-colors">
+                  <BookOpen className="w-3.5 h-3.5" />
+                  <span className="font-medium text-sm">Doubt Details</span>
+                </div>
+                <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400 transition-colors">
+                  <div className="flex items-center space-x-2">
+                    <Clock className="w-3 h-3" />
+                    <span className="text-xs">Subject: {incomingDoubt.subject}</span>
+                  </div>
+                  {incomingDoubt.is_scheduled && incomingDoubt.scheduled_date && (
+                    <div className="flex items-center space-x-2 mt-1.5 p-1.5 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                      <Calendar className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                      <span className="text-blue-700 dark:text-blue-300 font-semibold text-xs">
+                        Scheduled: {new Date(incomingDoubt.scheduled_date).toLocaleDateString('en-IN', { 
+                          weekday: 'long', 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })} at {incomingDoubt.scheduled_time || new Date(incomingDoubt.scheduled_date).toLocaleTimeString('en-IN', { 
+                          hour: '2-digit', 
+                          minute: '2-digit' 
+                        })}
+                      </span>
+                    </div>
+                  )}
+                  <div className="mt-1.5 text-gray-700 dark:text-gray-300">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Description:</p>
+                    <p className="line-clamp-2 text-xs">{incomingDoubt.description}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-2">
+                <button
+                  onClick={handleAcceptFromModal}
+                  disabled={isJoiningSession}
+                  className="w-full bg-green-500 dark:bg-green-600 hover:bg-green-600 dark:hover:bg-green-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2 text-sm"
+                >
+                  {isJoiningSession ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>{incomingDoubt.is_scheduled ? 'Accepting...' : 'Joining Session...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      {incomingDoubt.is_scheduled ? (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Accept</span>
+                        </>
+                      ) : (
+                        <>
+                          <Video className="w-4 h-4" />
+                          <span>Accept & Join</span>
+                        </>
+                      )}
+                    </>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => { if (!isJoiningSession) { setShowAvailableModal(false); setIncomingDoubt(null); } }}
+                  disabled={isJoiningSession}
+                  className="w-full border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 text-sm"
+                >
+                  Dismiss
+                </button>
+              </div>
+
+              {/* Additional Info */}
+              <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg transition-colors">
+                <p className="text-xs text-blue-700 dark:text-blue-300 text-center transition-colors">
+                  💡 You can also accept doubts from your dashboard anytime
+                </p>
+              </div>
             </div>
           </div>
         </div>
       )}
-      {/* Sidebar */}
-      <div className="w-64 bg-white shadow-sm border-r border-gray-200">
-        <div className="p-6">
-          <h1 className="text-xl font-semibold text-gray-800">
-            Hi <span className="text-blue-500">{user?.name || 'User'}</span>
-          </h1>
-        </div>
-        
-        <nav className="mt-6">
-          {getSidebarItems().map((item, index) => (
-            <div
-              key={index}
-              onClick={() => {
-                if (item.onClick) {
-                  item.onClick();
-                } else if (item.path) {
-                  navigate(item.path);
-                }
-              }}
-              className={`flex items-center px-6 py-3 text-gray-600 hover:bg-gray-50 cursor-pointer relative ${
-                item.active ? 'text-blue-500 bg-blue-50 border-r-2 border-blue-500' : ''
-              } ${item.label === 'Logout' ? 'text-red-600 hover:text-red-700 hover:bg-red-50' : ''}`}
-            >
-              <item.icon className="w-5 h-5 mr-3" />
-              <span className="font-medium">{item.label}</span>
-              {item.badge && (
-                <span className="ml-auto bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {item.badge}
-                </span>
-              )}
+      {/* Sidebar Wrapper */}
+      <aside className={`fixed inset-y-0 left-0 z-40 w-64 transition-transform duration-300 ease-in-out ${
+        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="w-64 bg-gray-100 dark:bg-gray-800 shadow-sm border-r border-gray-200 dark:border-gray-700 transition-colors duration-300 flex flex-col h-screen">
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-6 flex items-center justify-between">
+              <Link to="/dashboard" className="flex items-center">
+                <h1 className="text-xl font-bold text-blue-900 dark:text-blue-300 italic transition-colors duration-300 hover:opacity-80">
+                  EDU
+                  <span className="relative inline-block mx-0.5">
+                    <span className="absolute inset-0 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg transform rotate-3"></span>
+                    <span className="relative bg-gradient-to-r from-red-400 to-orange-400 rounded-lg px-1 py-0.5 text-white font-bold text-lg">
+                      F
+                    </span>
+                  </span>
+                  OYER
+              </h1>
+              </Link>
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="lg:hidden text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-          ))}
-        </nav>
-      </div>
+            
+            <nav className="mt-6 overflow-x-hidden">
+            {getSidebarItems().map((item, index) => (
+              <div
+                key={index}
+                onClick={() => {
+                  if (item.onClick) {
+                    item.onClick();
+                  } else if (item.path) {
+                    navigate(item.path);
+                  }
+                }}
+                className={`flex items-center px-4 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer relative transition-colors duration-300 min-w-0 ${
+                  item.active ? 'text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-r-2 border-blue-500 dark:border-blue-400' : ''
+                } ${item.label === 'Logout' ? 'text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20' : ''}`}
+              >
+                <item.icon className="w-5 h-5 mr-2 flex-shrink-0" />
+                <span className="font-medium truncate min-w-0">{item.label}</span>
+                {item.badge && (
+                  <span className="ml-auto bg-blue-500 dark:bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+            ))}
+            </nav>
+          </div>
+        </div>
+      </aside>
+
+      {/* Overlay for mobile */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden transition-opacity duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden">
+      <main className={`flex-1 overflow-hidden transition-all duration-300 ${
+        isSidebarOpen ? 'ml-64' : 'ml-0'
+      }`}>
         {/* Header */}
-        <div className="bg-white border-b border-gray-200">
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 transition-colors duration-300">
           <div className="px-6 py-3">
             <div className="flex items-center justify-between">
-              {/* Left side - empty for now */}
-              <div></div>
+              {/* Left side - Menu Toggle & Dark Mode Toggle */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+                >
+                  <Menu className="w-6 h-6" />
+                </button>
+                <DarkModeToggle />
+              </div>
               
               {/* Right side - Action buttons */}
               <div className="flex items-center gap-3">
                 {/* Solve a Doubt */}
-                <button className="px-4 py-2 bg-blue-500 border border-blue-600 text-white rounded-md font-medium hover:bg-blue-600 flex items-center gap-2 transition-colors text-sm">
+                <button 
+                  onClick={() => setShowSolverRequestForm(true)}
+                  className="px-4 py-2 bg-blue-500 dark:bg-blue-600 border border-blue-600 dark:border-blue-700 text-white rounded-md font-medium hover:bg-blue-600 dark:hover:bg-blue-700 flex items-center gap-2 transition-colors text-sm"
+                >
                   <BookOpen className="w-4 h-4" />
                   Solve a Doubt
                 </button>
@@ -371,48 +686,72 @@ const Dashboard = () => {
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto h-full">
+        <div className="p-6 pb-8 overflow-y-auto h-full bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
           {/* Welcome Banner */}
-          <div className="bg-gradient-to-r from-blue-500 to-blue-400 rounded-2xl p-8 text-white mb-6 relative overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-500 to-blue-400 dark:from-blue-600 dark:to-blue-700 rounded-2xl p-8 text-white mb-6 relative overflow-hidden">
             <div className="relative z-10">
-              <h2 className="text-3xl font-bold mb-2 flex items-center">
-                Welcome back, {user?.name || 'User'} <span className="ml-2">👋</span>
+              <h2 className="text-3xl font-bold mb-2 flex items-center flex-wrap gap-1">
+                {/* Split "Welcome" into individual letters */}
+                {("Welcome back, " + (user?.name || 'User')).split('').map((char, index) => {
+                  if (char === ' ') {
+                    return <span key={index} className="w-2"></span>;
+                  }
+                  return (
+                    <span key={index} className="welcome-3d">
+                      {char}
+                    </span>
+                  );
+                })}
+                <span className="ml-2 inline-block">
+                  <span 
+                    className="inline-block text-4xl"
+                    style={{
+                      animation: 'wave 1s ease-in-out infinite',
+                      transformStyle: 'preserve-3d',
+                      transform: 'perspective(1000px) rotateY(-15deg) rotateZ(0deg)',
+                      filter: 'drop-shadow(4px 4px 8px rgba(0,0,0,0.3))',
+                      textShadow: '2px 2px 4px rgba(0,0,0,0.2), -1px -1px 2px rgba(255,255,255,0.1)'
+                    }}
+                  >
+                    👋
+                  </span>
+                </span>
               </h2>
-              <p className="text-blue-100 mb-1">You've cleared <span className="font-semibold">{monthlySolved}</span> doubts this month</p>
-              <p className="text-blue-100">Average rating: <span className="font-semibold">{avgRating ? avgRating.toFixed(1) : '—'}</span></p>
+              <p className="text-blue-100 dark:text-blue-200 mb-1">You've cleared <span className="font-semibold">{monthlySolved}</span> doubts this month</p>
+              <p className="text-blue-100 dark:text-blue-200">Average rating: <span className="font-semibold">{avgRating ? avgRating.toFixed(1) : '—'}</span></p>
             </div>
             {/* Character Illustration */}
             <div className="absolute right-8 top-4">
-              <div className="w-32 h-32 bg-blue-300 rounded-full opacity-30"></div>
+              <div className="w-32 h-32 bg-blue-300 dark:bg-blue-500 rounded-full opacity-30"></div>
               <div className="absolute top-4 right-4 w-20 h-20 bg-white rounded-full opacity-20"></div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Wallet Display */}
             <WalletDisplay />
 
             {/* Performance Chart */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 transition-colors duration-300">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-800">Performance</h3>
+                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-100 transition-colors duration-300">Performance</h3>
                 <div className="flex items-center space-x-4">
                   <div className="flex space-x-2">
                     {['Overall', 'Completed'].map((tab) => (
                       <button
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`px-3 py-1 text-sm font-medium rounded ${
+                        className={`px-3 py-1 text-sm font-medium rounded transition-colors duration-300 ${
                           activeTab === tab
-                            ? 'text-blue-500 bg-blue-50'
-                            : 'text-gray-500 hover:text-gray-700'
+                            ? 'text-blue-500 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30'
+                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                         }`}
                       >
                         {tab}
                       </button>
                     ))}
                   </div>
-                  <button className="text-gray-400 hover:text-gray-600">
+                  <button className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                     </svg>
@@ -423,18 +762,20 @@ const Dashboard = () => {
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={performanceData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" className="dark:stroke-gray-700" />
                     <XAxis 
                       dataKey="name" 
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: '#9ca3af', fontSize: 12 }}
+                      className="dark:text-gray-400"
                     />
                     <YAxis 
                       axisLine={false}
                       tickLine={false}
                       tick={{ fill: '#9ca3af', fontSize: 12 }}
                       domain={[1, 4]}
+                      className="dark:text-gray-400"
                     />
                     <Line 
                       type="monotone" 
@@ -455,18 +796,24 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* My Doubts Sidebar */}
-            <DoubtSidebar />
-
-            {/* Right Column */}
-            <div className="space-y-6">
-              
-
-            </div>
           </div>
         </div>
-      </div>
+      </main>
+
+      {/* Solver Request Form Modal */}
+      <SolverRequestForm
+        isOpen={showSolverRequestForm}
+        onClose={() => setShowSolverRequestForm(false)}
+        onSuccess={() => {
+          setShowSolverRequestForm(false);
+          setToast({
+            type: 'success',
+            message: 'Solver request submitted successfully! Admin will review your request.'
+          });
+        }}
+      />
     </div>
+    </>
   );
 };
 

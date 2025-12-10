@@ -8,8 +8,41 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-// Load environment variables
-dotenv.config();
+// Resolve __dirname for ES modules (needed for .env path)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from backend/.env file (explicit path)
+const envPath = path.join(__dirname, '.env');
+console.log('📁 Loading .env file from:', envPath);
+console.log('📁 .env file exists:', fs.existsSync(envPath));
+
+const envResult = dotenv.config({ path: envPath });
+if (envResult.error) {
+  console.error('❌ Error loading .env file:', envResult.error);
+} else {
+  console.log('✅ .env file loaded successfully');
+  console.log('📋 Loaded variables:', Object.keys(envResult.parsed || {}).length, 'variables');
+  
+  // Debug: Check if OPENAI_API_KEY is in parsed result
+  if (envResult.parsed) {
+    const openaiInParsed = 'OPENAI_API_KEY' in envResult.parsed;
+    console.log('🔍 OPENAI_API_KEY in parsed result:', openaiInParsed);
+    if (openaiInParsed) {
+      const keyValue = envResult.parsed.OPENAI_API_KEY;
+      console.log('🔍 OPENAI_API_KEY value length:', keyValue ? keyValue.length : 0);
+      console.log('🔍 OPENAI_API_KEY first 30 chars:', keyValue ? keyValue.substring(0, 30) : 'N/A');
+      console.log('🔍 OPENAI_API_KEY has quotes:', keyValue ? (keyValue.startsWith('"') || keyValue.startsWith("'")) : false);
+    } else {
+      console.warn('⚠️ OPENAI_API_KEY NOT found in parsed .env variables!');
+      console.log('📋 Available keys:', Object.keys(envResult.parsed).filter(k => k.toLowerCase().includes('open') || k.toLowerCase().includes('ai')));
+      console.log('📋 All keys in .env:', Object.keys(envResult.parsed).join(', '));
+    }
+  }
+  
+  // Also check process.env after dotenv.config
+  console.log('🔍 process.env.OPENAI_API_KEY after dotenv.config:', process.env.OPENAI_API_KEY ? `SET (${process.env.OPENAI_API_KEY.substring(0, 20)}...)` : 'NOT SET');
+}
 
 // Debug: Log LiveKit environment variables on startup
 console.log('=== LiveKit Environment Debug ===');
@@ -18,14 +51,24 @@ console.log('LIVEKIT_API_KEY:', process.env.LIVEKIT_API_KEY ? 'SET' : 'NOT SET')
 console.log('LIVEKIT_API_SECRET:', process.env.LIVEKIT_API_SECRET ? 'SET' : 'NOT SET');
 console.log('================================');
 
+// Debug: Log OpenAI environment variables on startup
+console.log('=== OpenAI Environment Debug ===');
+const openaiKey = process.env.OPENAI_API_KEY;
+console.log('OPENAI_API_KEY:', openaiKey ? `SET (${openaiKey.substring(0, 20)}...)` : 'NOT SET');
+console.log('OPENAI_API_KEY length:', openaiKey ? openaiKey.length : 0);
+if (!openaiKey || openaiKey === 'your-openai-api-key-here') {
+  console.warn('⚠️ WARNING: OpenAI API key not configured. Subject validation will reject all submissions.');
+  console.warn('Please add OPENAI_API_KEY to your .env file in the backend folder.');
+  console.warn('Current .env path:', path.join(__dirname, '.env'));
+} else {
+  console.log('✅ OpenAI API key loaded successfully!');
+}
+console.log('================================');
+
 const app = express();
 
 // Trust proxy for proper IP detection behind Nginx
 app.set('trust proxy', true);
-
-// Resolve __dirname for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Create HTTP server and attach Socket.IO for real-time updates
 import http from 'http';
@@ -68,9 +111,14 @@ app.use(helmet({
 }));
 
 // Rate limiting with better configuration
+// Allow disabling rate limiting for stress testing via environment variable
+const rateLimitMax = process.env.STRESS_TEST_MODE === 'true' 
+  ? 999999  // Effectively disable for stress testing
+  : (parseInt(process.env.RATE_LIMIT_MAX) || 200);
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Increased limit for better user experience
+  max: rateLimitMax,
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again later.'
@@ -78,8 +126,11 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // Skip rate limiting for health checks
-    return req.path === '/health';
+    // Always skip health checks
+    if (req.path === '/health') return true;
+    // Skip all rate limiting in stress test mode
+    if (process.env.STRESS_TEST_MODE === 'true') return true;
+    return false;
   },
   // Trust proxy for proper IP detection behind Nginx
   trustProxy: true,
@@ -135,6 +186,8 @@ import livekitRoutes from './routes/livekit.js';
 import socialRoutes from './routes/social.js';
 import adminRoutes from './routes/admin.js';
 import walletRoutes from './routes/wallet.js';
+import universityRoutes from './routes/university.js';
+import paymentRoutes from './routes/payment.js';
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -146,6 +199,31 @@ app.use('/api/livekit', livekitRoutes);
 app.use('/api/social', socialRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/university', universityRoutes);
+app.use('/api/payment', paymentRoutes);
+
+// Serve uploaded files (resumes, marksheets, etc.)
+const uploadsPath = path.join(__dirname, 'uploads');
+if (fs.existsSync(uploadsPath)) {
+  console.log('Serving uploads from:', uploadsPath);
+  app.use('/uploads', express.static(uploadsPath, {
+    maxAge: '1d', // Cache uploaded files for 1 day
+    etag: true,
+    lastModified: true,
+    setHeaders: (res, filePath) => {
+      // Set proper MIME types for PDFs and images
+      if (filePath.endsWith('.pdf')) {
+        res.setHeader('Content-Type', 'application/pdf');
+      } else if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) {
+        res.setHeader('Content-Type', 'image/jpeg');
+      } else if (filePath.endsWith('.png')) {
+        res.setHeader('Content-Type', 'image/png');
+      }
+    }
+  }));
+} else {
+  console.warn('Uploads directory not found at:', uploadsPath);
+}
 
 // Serve frontend build (single-port setup) if available
 const frontendDistPath = path.resolve(__dirname, '../final/dist');
@@ -186,7 +264,7 @@ if (isFrontendBuilt) {
   
   // SPA fallback for non-API routes
   app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path === '/health') return next();
+    if (req.path.startsWith('/api') || req.path === '/health' || req.path.startsWith('/uploads')) return next();
     // Prevent browsers/proxies from caching HTML so users always get latest app shell
     res.setHeader('Cache-Control', 'no-store, must-revalidate');
     res.sendFile(path.join(frontendDistPath, 'index.html'));

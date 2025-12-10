@@ -38,7 +38,7 @@ export async function allotDoubt({ doubtId, solverId }) {
   try {
     // Optimize: Parallel database queries for faster processing
     const [doubtToAssign, solverToAssign] = await Promise.all([
-      Doubt.findById(doubtId).select('status solver_id subject doubter_id category').lean(),
+      Doubt.findById(doubtId).select('status solver_id subject doubter_id category is_scheduled scheduled_date scheduled_time').lean(),
       Solver.findOne({ user_id: solverId }).select('user_id specialities').lean()
     ]);
 
@@ -145,37 +145,86 @@ export async function allotDoubt({ doubtId, solverId }) {
         // Use email-specific link to trigger public token flow on the frontend
         const emailSessionUrl = `${sessionUrl}?email=true`;
 
+        // Format scheduled date/time if doubt is scheduled
+        let scheduledInfo = '';
+        let scheduledTextInfo = '';
+        if (doubtToAssign.is_scheduled && doubtToAssign.scheduled_date) {
+          const scheduledDate = new Date(doubtToAssign.scheduled_date);
+          const formattedDate = scheduledDate.toLocaleDateString('en-IN', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
+          const formattedTime = doubtToAssign.scheduled_time || scheduledDate.toLocaleTimeString('en-IN', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          });
+          scheduledInfo = `<p><strong>Scheduled Date & Time:</strong> ${formattedDate} at ${formattedTime}</p>`;
+          scheduledTextInfo = `Scheduled Date & Time: ${formattedDate} at ${formattedTime}\n\n`;
+        }
+
         // Notify Assigned Solver
+        let solverNotificationContent = `You accepted doubt "${doubtToAssign.subject}". Join the session: ${sessionUrl}`;
+        if (doubtToAssign.is_scheduled && doubtToAssign.scheduled_date) {
+          const scheduledDate = new Date(doubtToAssign.scheduled_date);
+          const formattedDate = scheduledDate.toLocaleDateString('en-IN', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          });
+          const formattedTime = doubtToAssign.scheduled_time || scheduledDate.toLocaleTimeString('en-IN', { 
+            hour: '2-digit', 
+            minute: '2-digit' 
+          });
+          solverNotificationContent = `You accepted doubt "${doubtToAssign.subject}" scheduled for ${formattedDate} at ${formattedTime}. You'll receive the meeting link at the scheduled time.`;
+        }
         await createNotification({
           userId: solverId,
           doubtId: doubtId,
           messageType: "ASSIGNED_TO_SOLVER",
-          content: `You accepted doubt "${doubtToAssign.subject}". Join the session: ${sessionUrl}`,
+          content: solverNotificationContent,
         });
 
         if (solverEmail) {
           await sendEmail({
             to: solverEmail,
             subject: `Solving Session Ready: ${doubtToAssign.subject}`,
-            text: `You have accepted the doubt "${doubtToAssign.subject}".\n\nPlease join the solving session here: ${emailSessionUrl}\n\nThe student has also been notified.`,
-            html: `<p>You have accepted the doubt "<strong>${doubtToAssign.subject}</strong>".</p><p>Please join the solving session with the student by clicking the button below:</p><p style="text-align: center; margin: 20px 0;"><a href="${emailSessionUrl}" style="background-color: #104be3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Join Session</a></p><p>The student has also been notified and will join the same link.</p>`,
+            text: `You have accepted the doubt "${doubtToAssign.subject}".\n\n${scheduledTextInfo}Please join the solving session here: ${emailSessionUrl}\n\nThe student has also been notified.`,
+            html: `<p>You have accepted the doubt "<strong>${doubtToAssign.subject}</strong>".</p>${scheduledInfo}<p>Please join the solving session with the student by clicking the button below:</p><p style="text-align: center; margin: 20px 0;"><a href="${emailSessionUrl}" style="background-color: #104be3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Join Session</a></p><p>The student has also been notified and will join the same link.</p>`,
           });
         }
 
     // Notify Student
+    let studentNotificationContent = `Solver assigned for "${doubtToAssign.subject}". Join the session: ${sessionUrl}`;
+    if (doubtToAssign.is_scheduled && doubtToAssign.scheduled_date) {
+      const scheduledDate = new Date(doubtToAssign.scheduled_date);
+      const formattedDate = scheduledDate.toLocaleDateString('en-IN', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      const formattedTime = doubtToAssign.scheduled_time || scheduledDate.toLocaleTimeString('en-IN', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      studentNotificationContent = `Solver assigned for "${doubtToAssign.subject}" scheduled for ${formattedDate} at ${formattedTime}. You'll receive the meeting link at the scheduled time.`;
+    }
     await createNotification({
       userId: studentId,
       doubtId: doubtId,
       messageType: "DOUBT_ASSIGNED",
-      content: `Solver assigned for "${doubtToAssign.subject}". Join the session: ${sessionUrl}`,
+      content: studentNotificationContent,
     });
 
     if (studentEmail) {
       await sendEmail({
         to: studentEmail,
         subject: `Solver Ready for Your Doubt: ${doubtToAssign.subject}`,
-        text: `A solver has accepted your doubt "${doubtToAssign.subject}" and is ready to help.\n\nPlease join the solving session here: ${emailSessionUrl}\n\nThe solver has also been notified.`,
-        html: `<p>A solver has accepted your doubt "<strong>${doubtToAssign.subject}</strong>" and is ready to help.</p><p>Please join the solving session with the solver by clicking the button below:</p><p style="text-align: center; margin: 20px 0;"><a href="${emailSessionUrl}" style="background-color: #104be3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Join Session</a></p><p>The solver has also been notified and will join the same link.</p>`,
+        text: `A solver has accepted your doubt "${doubtToAssign.subject}" and is ready to help.\n\n${scheduledTextInfo}Please join the solving session here: ${emailSessionUrl}\n\nThe solver has also been notified.`,
+        html: `<p>A solver has accepted your doubt "<strong>${doubtToAssign.subject}</strong>" and is ready to help.</p>${scheduledInfo}<p>Please join the solving session with the solver by clicking the button below:</p><p style="text-align: center; margin: 20px 0;"><a href="${emailSessionUrl}" style="background-color: #104be3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Join Session</a></p><p>The solver has also been notified and will join the same link.</p>`,
       });
     }
 

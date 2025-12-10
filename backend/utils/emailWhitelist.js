@@ -5,23 +5,11 @@
 
 // List of approved email addresses/domains
 const APPROVED_EMAILS = [
-  // Add specific approved emails here
-  'admin@edufoyer.com',
-  'test@edufoyer.com',
-  'support@edufoyer.com',
-  'user@edufoyer.com',
-  'student@edufoyer.com',
-  'teacher@edufoyer.com',
-  'solver@edufoyer.com'
+  // Only admin emails can be added here if needed
 ];
 
-// List of approved domains (optional)
+// List of approved domains - ONLY KIIT domains allowed
 const APPROVED_DOMAINS = [
-  'edufoyer.com',
-  'gmail.com',
-  'yahoo.com',
-  'hotmail.com',
-  'outlook.com',
   'kiit.ac.in',
   'kiit.edu.in'
 ];
@@ -60,7 +48,7 @@ export const checkEmailWhitelist = (email) => {
 
   return {
     isApproved: false,
-    message: 'Email not found in approved list. Please contact administrator.'
+    message: 'Only @kiit.ac.in or @kiit.edu.in email addresses are allowed for registration.'
   };
 };
 

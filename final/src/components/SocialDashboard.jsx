@@ -32,7 +32,8 @@ import {
   HelpCircle,
   ChevronRight,
   ArrowRight as ArrowRightIcon,
-  ArrowLeft
+  ArrowLeft,
+  Clock
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import authService from '../services/authService';
@@ -402,8 +403,18 @@ const SocialDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {/* Coming Soon Badge - Top Banner */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-purple-100 to-pink-100 border-b-4 border-purple-500 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-center">
+          <div className="inline-flex items-center gap-3">
+            <Clock className="w-8 h-8 text-purple-600 animate-pulse" />
+            <span className="text-3xl font-bold text-purple-800">Coming Soon</span>
+          </div>
+        </div>
+      </div>
+      
       {/* Left Sidebar - Purple */}
-      <div className="w-64 bg-gradient-to-b from-purple-600 to-purple-700 text-white">
+      <div className="w-64 bg-gradient-to-b from-purple-600 to-purple-700 text-white pt-12">
         <div className="p-6">
           {/* Logo */}
           <div className="flex items-center space-x-3 mb-8">
@@ -565,7 +576,7 @@ const SocialDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex pt-20">
         {/* Center Content */}
         <div className="flex-1 max-w-2xl">
         {currentPage === 'feed' && (

@@ -28,26 +28,9 @@ export function detectRecordingAttempts() {
     warnings: []
   };
 
-  // Method 1: Check for getDisplayMedia API usage
-  try {
-    if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
-      // Intercept the API
-      const originalGetDisplayMedia = navigator.mediaDevices.getDisplayMedia.bind(navigator.mediaDevices);
-      navigator.mediaDevices.getDisplayMedia = function(constraints) {
-        detection.isRecording = true;
-        detection.methods.push('getDisplayMedia');
-        detection.warnings.push('Screen sharing detected');
-        
-        // Show warning but allow it (can't block completely)
-        console.warn('Screen sharing attempt detected');
-        
-        // Return the original function
-        return originalGetDisplayMedia(constraints);
-      };
-    }
-  } catch (e) {
-    console.error('Error intercepting getDisplayMedia:', e);
-  }
+  // Method 1: Skip getDisplayMedia interception - it's needed for legitimate screen sharing
+  // getDisplayMedia is used by LiveKit for screen sharing, so we don't treat it as recording
+  // We only detect external recording tools, not legitimate screen sharing
 
   // Method 2: Check for DevTools (common for recording)
   const devtools = {

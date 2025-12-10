@@ -58,10 +58,19 @@ const PreviousYearLive = () => {
           <span className="font-medium">Back to Dashboard</span>
         </button>
       </div>
+      
       <h1 className="text-2xl font-semibold mb-6 flex items-center gap-2">
         <Video className="w-6 h-6 text-green-600" />
         Live Previous Year Solution
       </h1>
+
+      {/* Coming Soon Badge */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-3 bg-gradient-to-r from-green-100 to-emerald-100 border-4 border-green-500 px-8 py-4 rounded-2xl shadow-2xl">
+          <Clock className="w-8 h-8 text-green-600 animate-pulse" />
+          <span className="text-3xl font-bold text-green-800">Coming Soon</span>
+        </div>
+      </div>
 
       <form onSubmit={handleSchedule} className="space-y-5 bg-white rounded-lg p-5 shadow">
         <div>

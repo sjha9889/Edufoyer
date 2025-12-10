@@ -12,13 +12,16 @@ export function initSocket(httpServer) {
       credentials: true,
       methods: ['GET', 'POST']
     },
-    pingTimeout: 30000, // Reduced to 30 seconds for faster detection
-    pingInterval: 10000, // Reduced to 10 seconds for faster response
-    maxHttpBufferSize: 1e6, // 1MB
+    // Optimizations for scalability (15k users)
+    pingTimeout: 60000, // Increased timeout for stability
+    pingInterval: 25000, // Increased interval to reduce overhead
+    maxHttpBufferSize: 1e6, // 1MB max buffer
     allowEIO3: true,
     transports: ['websocket', 'polling'], // Allow both transports
     upgradeTimeout: 10000, // Faster upgrade
-    allowUpgrades: true
+    allowUpgrades: true,
+    perMessageDeflate: true, // Enable compression
+    connectTimeout: 45000 // Connection timeout
   });
 
   // Connection handling with better error management

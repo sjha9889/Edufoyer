@@ -43,6 +43,16 @@ const doubtSchema = new mongoose.Schema({
     type: String,
     enum: ['small', 'medium', 'large'],
     default: 'medium'
+  },
+  is_scheduled: {
+    type: Boolean,
+    default: false
+  },
+  scheduled_date: {
+    type: Date
+  },
+  scheduled_time: {
+    type: String // Store as string like "14:30"
   }
 }, {
   timestamps: true

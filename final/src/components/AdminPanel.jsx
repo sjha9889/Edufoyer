@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
+// import DoubtsPackBuilder from './DoubtsPackBuilder'; // Commented out - component not available
 
 const AdminPanel = () => {
   const [formData, setFormData] = useState({
@@ -284,6 +285,9 @@ const AdminPanel = () => {
               </div>
             )}
           </form>
+
+          {/* DoubtsPackBuilder component commented out - not available */}
+          {/* <DoubtsPackBuilder className="border-t border-gray-200" /> */}
 
           {/* Information Section */}
           <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
