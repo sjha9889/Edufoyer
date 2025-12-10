@@ -14,20 +14,18 @@ export default defineConfig({
     sourcemap: false,
     minify: 'esbuild', // Faster than terser, built into Vite
     chunkSizeWarningLimit: 1000,
+    // Simplified chunking to avoid circular dependency issues
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          // Split node_modules into separate chunk
+        // Simplified manual chunks - only split large vendors to avoid circular deps
+        manualChunks(id) {
+          // Only split very large libraries, let Vite handle the rest
           if (id.includes('node_modules')) {
+            // React and React DOM together
             if (id.includes('react') || id.includes('react-dom')) {
               return 'vendor-react';
             }
-            if (id.includes('@livekit')) {
-              return 'vendor-livekit';
-            }
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons';
-            }
+            // Everything else in one vendor chunk to avoid circular deps
             return 'vendor';
           }
         },
