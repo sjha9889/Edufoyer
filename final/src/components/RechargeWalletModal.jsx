@@ -222,11 +222,6 @@ const RechargeWalletModal = ({ isOpen, onClose, universityInfo, onPurchaseSucces
           backdrop_color: '#000000cc', // Dark backdrop with transparency
           hide: false
         },
-        modal: {
-          ondismiss: function() {
-            setPurchasing(null);
-          }
-        },
         // Payment methods - Enable UPI, Cards, Netbanking, Wallet
         // Disable Pay Later
         method: {
@@ -306,10 +301,6 @@ const RechargeWalletModal = ({ isOpen, onClose, universityInfo, onPurchaseSucces
               order: ["paytm", "phonepe", "airtelmoney", "mobikwik"]
             }
           }
-        },
-        // Additional UPI configuration to ensure PhonePe and Google Pay are visible
-        notes: {
-          payment_methods: "upi,phonepe,googlepay"
         }
       };
 
