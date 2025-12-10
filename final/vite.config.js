@@ -14,21 +14,9 @@ export default defineConfig({
     sourcemap: false,
     minify: 'esbuild', // Faster than terser, built into Vite
     chunkSizeWarningLimit: 1000,
-    // Simplified chunking to avoid circular dependency issues
+    // Let Vite handle chunking automatically to avoid circular dependencies
     rollupOptions: {
       output: {
-        // Simplified manual chunks - only split large vendors to avoid circular deps
-        manualChunks(id) {
-          // Only split very large libraries, let Vite handle the rest
-          if (id.includes('node_modules')) {
-            // React and React DOM together
-            if (id.includes('react') || id.includes('react-dom')) {
-              return 'vendor-react';
-            }
-            // Everything else in one vendor chunk to avoid circular deps
-            return 'vendor';
-          }
-        },
         // Optimize chunk file names
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
