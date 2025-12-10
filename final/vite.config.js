@@ -14,20 +14,29 @@ export default defineConfig({
     sourcemap: false,
     minify: 'esbuild', // Faster than terser, built into Vite
     chunkSizeWarningLimit: 1000,
+    // Disable compressed size reporting to speed up build
+    reportCompressedSize: false,
+    // Reduce memory usage
+    target: 'es2015',
+    // Optimize for faster builds
+    cssCodeSplit: true,
     rollupOptions: {
+      // Limit parallel operations to prevent hanging
+      maxParallelFileOps: 1,
       output: {
+        // Simplified chunk splitting to prevent build hangs
         manualChunks: (id) => {
-          // Split node_modules into separate chunk
+          // Only split large vendor libraries
           if (id.includes('node_modules')) {
+            // React and React DOM together
             if (id.includes('react') || id.includes('react-dom')) {
               return 'vendor-react';
             }
-            if (id.includes('@livekit')) {
+            // LiveKit is large, separate it
+            if (id.includes('@livekit') || id.includes('livekit-client')) {
               return 'vendor-livekit';
             }
-            if (id.includes('lucide-react')) {
-              return 'vendor-icons';
-            }
+            // Everything else in one vendor chunk
             return 'vendor';
           }
         },
@@ -35,12 +44,18 @@ export default defineConfig({
         chunkFileNames: 'assets/js/[name]-[hash].js',
         entryFileNames: 'assets/js/[name]-[hash].js',
         assetFileNames: 'assets/[ext]/[name]-[hash].[ext]'
+      },
+      // Reduce tree-shaking complexity
+      treeshake: {
+        preset: 'smallest',
+        moduleSideEffects: false
       }
     },
-    // Increase build timeout
-    reportCompressedSize: false,
-    // Reduce memory usage
-    target: 'es2015'
+    // Optimize for lower memory usage
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true
+    }
   },
   server: {
     port: Number(process.env.PORT) || 3000,

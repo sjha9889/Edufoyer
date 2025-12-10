@@ -68,7 +68,8 @@ console.log('================================');
 const app = express();
 
 // Trust proxy for proper IP detection behind Nginx
-app.set('trust proxy', true);
+// Set to 1 to trust only the first proxy (Nginx) - more secure than trusting all
+app.set('trust proxy', 1);
 
 // Create HTTP server and attach Socket.IO for real-time updates
 import http from 'http';
@@ -132,8 +133,8 @@ const limiter = rateLimit({
     if (process.env.STRESS_TEST_MODE === 'true') return true;
     return false;
   },
-  // Trust proxy for proper IP detection behind Nginx
-  trustProxy: true,
+  // Trust proxy setting inherited from Express app.set('trust proxy', 1)
+  // No need to set trustProxy here - it will use Express's setting
   // Skip rate limiting for specific headers
   skipSuccessfulRequests: false,
   skipFailedRequests: false
@@ -227,9 +228,11 @@ if (fs.existsSync(uploadsPath)) {
 
 // Serve frontend build (single-port setup) if available
 const frontendDistPath = path.resolve(__dirname, '../final/dist');
-const isFrontendBuilt = fs.existsSync(path.join(frontendDistPath, 'index.html'));
+const frontendIndexPath = path.join(frontendDistPath, 'index.html');
+const isFrontendBuilt = fs.existsSync(frontendIndexPath);
+
 if (isFrontendBuilt) {
-  console.log('Serving frontend from:', frontendDistPath);
+  console.log('✅ Serving frontend from:', frontendDistPath);
   // Serve static files with proper headers
   app.use(express.static(frontendDistPath, {
     maxAge: '1d', // Cache static assets for 1 day
@@ -249,31 +252,58 @@ if (isFrontendBuilt) {
   
   // Handle favicon and other common assets
   app.get('/favicon.ico', (req, res) => {
-    res.sendFile(path.join(frontendDistPath, 'favicon.ico'));
+    const faviconPath = path.join(frontendDistPath, 'favicon.ico');
+    if (fs.existsSync(faviconPath)) {
+      res.sendFile(faviconPath);
+    } else {
+      res.status(404).end();
+    }
   });
   
   app.get('/vite.svg', (req, res) => {
-    res.sendFile(path.join(frontendDistPath, 'vite.svg'));
+    const viteSvgPath = path.join(frontendDistPath, 'vite.svg');
+    if (fs.existsSync(viteSvgPath)) {
+      res.sendFile(viteSvgPath);
+    } else {
+      res.status(404).end();
+    }
   });
   
   // Handle assets directory requests
   app.get('/assets/*', (req, res) => {
     const assetPath = path.join(frontendDistPath, req.path);
-    res.sendFile(assetPath);
-  });
-  
-  // SPA fallback for non-API routes
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path === '/health' || req.path.startsWith('/uploads')) return next();
-    // Prevent browsers/proxies from caching HTML so users always get latest app shell
-    res.setHeader('Cache-Control', 'no-store, must-revalidate');
-    res.sendFile(path.join(frontendDistPath, 'index.html'));
+    if (fs.existsSync(assetPath)) {
+      res.sendFile(assetPath);
+    } else {
+      res.status(404).end();
+    }
   });
 } else {
-  console.warn('Frontend build not found at', frontendDistPath, '- skipping static serve. Run "npm run build" in the final/ app.');
+  console.warn('⚠️ Frontend build not found at', frontendDistPath, '- skipping static serve. Run "npm run build" in the final/ directory.');
 }
 
-// 404 handler
+// SPA fallback for non-API routes - must be before 404 handler
+app.get('*', (req, res, next) => {
+  // Skip API routes, health check, and uploads
+  if (req.path.startsWith('/api') || req.path === '/health' || req.path.startsWith('/uploads')) {
+    return next();
+  }
+  
+  // If frontend is built, serve index.html
+  if (isFrontendBuilt && fs.existsSync(frontendIndexPath)) {
+    res.setHeader('Cache-Control', 'no-store, must-revalidate');
+    res.sendFile(frontendIndexPath);
+  } else {
+    // If frontend is not built, return helpful error message
+    res.status(503).json({
+      success: false,
+      message: 'Frontend not built. Please build the frontend by running "npm run build" in the final/ directory.',
+      path: frontendDistPath
+    });
+  }
+});
+
+// 404 handler for API routes and other unmatched routes
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
